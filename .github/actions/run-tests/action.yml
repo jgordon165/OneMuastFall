@@ -1,0 +1,25 @@
+name: run-tests
+description: cross-platform action to run the OneMuastFall tests
+
+inputs:
+  build_dir:
+    required: false
+    default: build
+  configuration:
+    description: CMake configuration (multi-config generators such as Visual Studio)
+    required: false
+    default: Release
+
+runs:
+  using: "composite"
+  steps:
+    # The repository contains no One Must Fall 2097 data, so only the
+    # data-free tests run here (format decoders, Lua modules, booting to the
+    # no-data screen). With OMF_DATA set to a game folder, the format test
+    # also decodes every original file (run locally).
+    - name: Run tests
+      run: ctest --test-dir "${{inputs.build_dir}}" -C ${{inputs.configuration}} --output-on-failure
+      shell: pwsh
+      env:
+        SDL_VIDEODRIVER: dummy
+        SDL_AUDIODRIVER: dummy

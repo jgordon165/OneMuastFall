@@ -1,0 +1,46 @@
+# Build output
+build/
+out/
+.vs/
+*.user
+
+# Original game data is NEVER committed. Point the engine at your own copy
+# of One Must Fall 2097 with --data <path>. These patterns are a safety net
+# in case files get copied into the tree by accident.
+data/
+gamedata/
+omf2097/
+*.BK
+*.bk
+*.AF
+*.af
+*.PSM
+*.psm
+*.PIC
+*.pic
+*.TRN
+*.trn
+*.DAT
+*.dat
+*.EXE
+*.exe
+*.BIN
+*.bin
+*.ZIP
+*.zip
+
+# Reverse-engineering output may contain decompiled original code; keep local.
+re/output/
+re/ghidra_project/
+
+# Screenshots from headless runs
+*.bmp
+
+# Python
+__pycache__/
+*.pyc
+
+# CI / packaging output
+stage/
+dist/
+.deps/
