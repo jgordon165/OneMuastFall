@@ -30,7 +30,7 @@ A sprite is `{ x, y, w, h, index, missing, img }`.
 | | |
 |---|---|
 | `clear([c])`, `pset(x,y,c)`, `pget(x,y)`, `fill(x,y,w,h,c)`, `rect(...)`, `line(x0,y0,x1,y1,c)` | |
-| `draw(img, x, y [, flip_x, flip_y, opaque, remap])` | index 0 is transparent unless `opaque`; with a remap string the pixels under the sprite are remapped instead |
+| `draw(img, x, y [, flip_x, flip_y, opaque, remap, pal_offset, pal_limit, opacity])` | index 0 is transparent unless `opaque`; with a remap string the pixels under the sprite are remapped instead; indices ≤ pal_limit become min(i + pal_offset, pal_limit) (player 2's HAR colours); opacity < 255 dithers |
 | `draw_color(img, x, y, flip_x, flip_y, c)` | the sprite's shape in one colour |
 | `remap_rect(x, y, w, h, remap [, rounds])` | remaps a box (the menu panels) |
 | `text(s, x, y [, c, font, shadow])` | font 0 = big (8x8), 1 = small (6x6); returns the end x |

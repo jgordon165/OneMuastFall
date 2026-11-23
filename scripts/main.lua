@@ -19,7 +19,20 @@ function game.init()
     end
     res.init()
 
-    if sys.smoke then
+    if sys.fight then
+        -- --fight: straight into a fight (testing); OMF_FIGHT="har1,har2,arena,ai1,ai2"
+        local spec = {}
+        for v in (os.getenv("OMF_FIGHT") or "0,1,0,3,3"):gmatch("[^,]+") do spec[#spec + 1] = tonumber(v) end
+        local pilots = require("game.pilots")
+        scenes.switch(require("scenes.arena"), {
+            arena = spec[3] or 0, rounds = 3,
+            players = {
+                { har = spec[1] or 0, pilot = pilots[1], ai = (spec[4] or 0) > 0 and spec[4] or nil },
+                { har = spec[2] or 1, pilot = pilots[2], ai = (spec[5] or 0) > 0 and spec[5] or nil },
+            },
+            on_done = function(w) sys.log("fight over, winner: player " .. tostring((w or -1) + 1)); sys.quit() end,
+        })
+    elseif sys.smoke then
         scenes.switch(require("scenes.smoke"))
     elseif sys.explorer then
         scenes.switch(require("scenes.explorer"))

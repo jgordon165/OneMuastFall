@@ -79,7 +79,8 @@ its length in ticks. Tags are matched longest first; a tag that takes no
 number is skipped over when a number follows (so `x=-250` is the `x=` tag).
 The full tag list is in `scripts/core/script.lua`.
 
-Tags the port implements so far (scenes):
+Tags the port implements so far (scenes and fights; `scripts/core/player.lua`
+and `scripts/game/har.lua`):
 
 | tag | does |
 |---|---|
@@ -93,13 +94,19 @@ Tags the port implements so far (scenes):
 | `x+`/`x-`/`y+`/`y-` | move by |
 | `r`/`f` | flip horizontally / vertically |
 | `ox`/`oy` | sprite offset correction |
-| `bs`/`bf` | opacity at the frame's start / end (0 and 0 hides it) |
+| `bs`/`bf` | opacity at the frame's start / end, drawn dithered |
+| `br` | glow (the scene's remap table 3 under the sprite) |
+| `x+`/`x-`/`y+`/`y-`, `v` | every tick: move by (x relative to facing); with `v`, set the velocity instead |
+| `e`, `ar`, `ac`, `ad`, `g`, `h`, `ab`, `bu`, `cg` | position: stick to the enemy, turn around, face the middle, face the stick, to the floor, stop, pass walls, aim for the middle, land |
+| `q`, `n`, `k` | hit window, no hit points, damage multiplier |
+| `jl`/`jm`/`jh`/`jj`/`jz`/`jg`/`jn`/`jf`/`jf2` | which moves can chain from this frame |
+| `zz`/`zl`/`zm`/`zh`/`zj`/`zp`/`zg` | invulnerable (to everything / low / mid / high / jumping / projectiles / throws) |
+| `bj`, `cl`, `cw`, `aw`, `ai`, `ue`, `uh`, `ur`, `bn`, `i`, `aa`, `af`, `cx`, `cp` | fight rules: jump to move, land into the next move, wall tricks, launchers, block rules, air attacks, time freeze, steering, hit pause |
 
-Not done yet: partial opacity and the glow/translucency effects (`br`,
-`bt`, `bg`, `ub`; they need the BK remap tables), screen shake (`bl`, `bb`),
-`y` scaling, the credits palette copies (`bpo`, `ba`, `bi`, `bc`, `bd`) and
-everything HAR- and fight-specific (`a*`, `c*`, `j*`, `u*`, `q`, `e`, `k`,
-`v`...).
+Not done yet: translucency (`bt`, `ub`, `bg`), screen shake (`bl`, `bb`),
+the HAR palette flashes (`ptd`/`ptr`/`ptp`, `pa`...), the credits palette
+copies (`bpo`, `ba`, `bi`, `bc`, `bd`), walking to a spot (`bm`), and the
+rarer fight tags (`mu`, `ua`, `at`, `as`, `b1`/`b2` secrets...).
 
 ### Timing
 

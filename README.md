@@ -26,10 +26,15 @@ links the official download. Original files are git-ignored as a safety net.
 - **The intro** plays from INTRO.BK's own scripts, with its sounds and the
   menu music, then the **main menu** (MAIN.BK, MENU.PSM, the original's
   menu panel and items).
+- **Fights**: ONE PLAYER GAME (against the computer) and TWO PLAYER GAME.
+  All 11 HARs with their real moves, specials and throws, in all 5 arenas;
+  blocking, damage, stun, knock-downs, rounds, KOs, victory poses, the HUD.
+  How it works: [docs/fighting.md](docs/fighting.md).
 - **Asset explorer** (F12): browse and play every BK animation and scene,
   every HAR move, photo, sound, song and string.
-- Not yet: fighting (HAR physics, moves, AI, the arenas' hazards),
-  tournament mode, the other menus, settings, networking.
+- Not yet: the original's HAR select and vs screens, arena hazards,
+  tournament mode, the other menus, settings, networking (the list is at
+  the end of docs/fighting.md).
 
 ## Build
 
@@ -57,12 +62,29 @@ build\Release\onemustfall.exe --data C:\Games\OMF2097
 |---|---|
 | `--skip-intro` | straight to the main menu |
 | `--explorer` | open the asset explorer |
+| `--fight` | straight into a fight (`OMF_FIGHT=har1,har2,arena,ai1,ai2`, AI level 0 = human) |
 | `--scale N` | window size (default 3 × 320×240) |
 | F12 | asset explorer, from anywhere |
 | F11 / Alt+Enter | full screen |
 
 In the intro, Esc / Enter / Space go to the menu. In the menu, Up/Down and
 Enter; Esc jumps to QUIT. DEMO replays the intro.
+
+### Fighting
+
+ONE PLAYER GAME or TWO PLAYER GAME opens the fight setup: pick each HAR
+and pilot (and the computer's level), the arena and the rounds with
+Left/Right, then FIGHT!. Esc leaves a fight.
+
+| | Player 1 | Player 2 |
+|---|---|---|
+| move / crouch / jump | arrows (Home, PgUp, End, PgDn diagonals) | W A D X (Q E Z C diagonals) |
+| punch | Enter | Left Ctrl |
+| kick | Right Shift | Left Shift |
+| game pad | d-pad, A/X punch, B/Y kick | — |
+
+Back blocks, down-back blocks low. Special moves are the original's
+motions from the AF files (the asset explorer shows each move's input).
 
 The picture is the original's 320×200 shown at 4:3, as on a DOS monitor.
 
@@ -82,8 +104,8 @@ Up/Down (or a letter) to pick a file, Enter to open, Esc back.
 |---|---|
 | `src/formats/` | decoders for the original files (no SDL; tested on their own) |
 | `src/` | the host: window and palette, mixer and music, input, Lua API |
-| `scripts/` | the game, in Lua: `core/` (animation scripts, scenes), `scenes/`, `ui/`, `game/` |
-| `docs/` | [formats](docs/formats.md), [Lua API](docs/lua-api.md) |
+| `scripts/` | the game, in Lua: `core/` (animation player, scenes), `game/` (HARs, AI, controls, pilots), `scenes/` (intro, menu, setup, arena, explorer), `ui/` |
+| `docs/` | [formats](docs/formats.md), [fighting](docs/fighting.md), [Lua API](docs/lua-api.md) |
 | `re/`, `tools/` | reverse engineering: unpacking `MASTER.DAT` for Ghidra ([re/README.md](re/README.md)) |
 | `tests/` | format and Lua tests; `OMF_DATA=<folder> ctest` also decodes every original file |
 

@@ -25,8 +25,8 @@ function M:enter()
     })
     if not audio.music_playing() then audio.music("MENU.PSM", true) end
     self.menu = ui.new({
-        { label = "ONE PLAYER GAME", action = not_yet },
-        { label = "TWO PLAYER GAME", action = not_yet },
+        { label = "ONE PLAYER GAME", action = function() scenes.switch(require("scenes.setup"), { vs_ai = true }) end },
+        { label = "TWO PLAYER GAME", action = function() scenes.switch(require("scenes.setup"), { vs_ai = false }) end },
         { label = "TOURNAMENT PLAY", action = not_yet },
         { label = "NETWORK PLAY",    action = not_yet },
         { label = "CONFIGURATION",   action = not_yet },
@@ -48,6 +48,7 @@ function M:update(dt)
         self.menu.sel = #self.menu.items   -- Esc goes to QUIT, as in the original
     end
     ui.update(self.menu)
+    if scenes.top() ~= self then return end   -- an item switched scenes
     self.stage:update(dt)
     if M.notice_ticks > 0 then
         M.notice_ticks = M.notice_ticks - dt / 10

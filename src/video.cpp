@@ -71,7 +71,12 @@ void Video::line(int x0, int y0, int x1, int y1, uint8_t c) {
     }
 }
 
-void Video::blit(const omf::Image& img, int x, int y, bool flipX, bool flipY, bool opaque, const uint8_t* remap) {
+void Video::blit(const omf::Image& img, int x, int y, bool flipX, bool flipY, bool opaque, const uint8_t* remap,
+                 int palOffset, int palLimit, int opacity) {
+    static const uint8_t bayer[4][4] = {{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
+    if (opacity <= 0) return;
+    const bool dither = opacity < 255;
+    const int level = opacity * 16 / 256;   // 0..15 pixels of 16 kept
     for (int sy = 0; sy < img.h; ++sy) {
         int dy = y + sy;
         if (dy < cy0_ || dy >= cy1_) continue;
@@ -82,6 +87,8 @@ void Video::blit(const omf::Image& img, int x, int y, bool flipX, bool flipY, bo
             if (dx < cx0_ || dx >= cx1_) continue;
             uint8_t c = row[flipX ? img.w - 1 - sx : sx];
             if (!c && !opaque) continue;
+            if (dither && bayer[dy & 3][dx & 3] >= level) continue;
+            if (c && c <= palLimit) c = uint8_t(std::min(c + palOffset, palLimit));
             uint8_t& d = fb_[size_t(dy) * W + dx];
             d = remap ? remap[d] : c;
         }

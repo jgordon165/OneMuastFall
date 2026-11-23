@@ -124,6 +124,11 @@ if(OMF_TESTS)
     if(DEFINED ENV{OMF_DATA})
         add_test(NAME smoke_data COMMAND onemustfall --data $ENV{OMF_DATA} --smoke
                  --scripts ${CMAKE_SOURCE_DIR}/scripts)
+        # and a whole computer-vs-computer match, start to finish
+        add_test(NAME fight_data COMMAND onemustfall --data $ENV{OMF_DATA} --fight --frames 30000
+                 --scripts ${CMAKE_SOURCE_DIR}/scripts)
+        set_tests_properties(fight_data PROPERTIES ENVIRONMENT "OMF_FIGHT=4,7,3,4,4"
+                             PASS_REGULAR_EXPRESSION "fight over" FAIL_REGULAR_EXPRESSION "lua error")
     endif()
 
     add_executable(omf_luatest tests/luatest.cpp)
