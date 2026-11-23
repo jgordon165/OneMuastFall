@@ -34,7 +34,8 @@ function M:enter()
         { label = "HELP",            action = not_yet },
         { label = "DEMO",            action = function() scenes.switch(require("scenes.intro")) end },
         { label = "SCOREBOARD",      action = not_yet },
-        { label = "QUIT",            action = function() sys.quit() end },
+        { label = "QUIT",            action = function() sys.quit() end,
+          disabled = not sys.can_exit },   -- the XeLL build has nowhere to go
     }, 165, 5, 151, 119)
     M.notice, M.notice_ticks = nil, 0
 end
@@ -44,7 +45,7 @@ function M:leave()
 end
 
 function M:update(dt)
-    if input.pressed("escape") then
+    if input.pressed("escape") and sys.can_exit then
         self.menu.sel = #self.menu.items   -- Esc goes to QUIT, as in the original
     end
     ui.update(self.menu)

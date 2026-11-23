@@ -1,6 +1,7 @@
 # OneMuastFall
 
 [![CI-build](https://github.com/jgordon165/OneMuastFall/actions/workflows/ci-build.yml/badge.svg)](https://github.com/jgordon165/OneMuastFall/actions/workflows/ci-build.yml)
+[![xbox360](https://github.com/jgordon165/OneMuastFall/actions/workflows/xbox360.yml/badge.svg)](https://github.com/jgordon165/OneMuastFall/actions/workflows/xbox360.yml)
 [![code-analysis](https://github.com/jgordon165/OneMuastFall/actions/workflows/code-analysis.yml/badge.svg)](https://github.com/jgordon165/OneMuastFall/actions/workflows/code-analysis.yml)
 
 A Lua recompilation of Diversions Entertainment's *One Must Fall: 2097*
@@ -98,6 +99,29 @@ Up/Down (or a letter) to pick a file, Enter to open, Esc back.
 - **PIC**: Left/Right pick a photo. **PSM**: Enter plays/stops.
 - **SOUNDS.DAT**: Enter plays. **ENGLISH.DAT**: scroll the strings.
 
+## Xbox 360
+
+Two console builds, from the same platform layer as Meguarace and Raptua
+(`platform/xenon/`), made by the `xbox360` workflow:
+
+| Package | For | Built with |
+|---|---|---|
+| `onemustfall-xbox360-xex.zip` | a console that runs unsigned code (BadUpdate + FreeMyXe, RGH, JTAG): launch `onemustfall.xex` from the dashboard or Aurora | [xsdk](https://github.com/openpak/x360-sdk) |
+| `onemustfall-xbox360-xell.zip` | XeLL (`onemustfall.elf32`) | LibXenon (Free60) |
+
+Copy the `onemustfall` folder to a FAT32 USB stick and your One Must Fall
+2097 files into its `data/` folder; the README inside has the details.
+Controller 1 is player 1 and runs the menus, controller 2 is player 2: A/X
+punch, B/Y kick, START chooses, BACK goes back. QUIT ends the title and goes
+to the dashboard, or to the program named in `dashboard.txt` (e.g.
+`Usb0:\Aurora\default.xex`). The `aurora/` folder has art for Aurora
+(title ID 4F4D4632), drawn by `tools/make_aurora_art.py`. Every push builds
+both; a `v*` tag attaches them to the release.
+
+Without a console, `-DOMF_XENON_SIM=ON` builds the same SDL drivers and
+layout on Linux, with the pad scripted (`XENON_SIM_PAD`, see
+`platform/xenon/xenon_platform_sim.c`); CI runs it on every push.
+
 ## Layout
 
 | | |
@@ -106,7 +130,8 @@ Up/Down (or a letter) to pick a file, Enter to open, Esc back.
 | `src/` | the host: window and palette, mixer and music, input, Lua API |
 | `scripts/` | the game, in Lua: `core/` (animation player, scenes), `game/` (HARs, AI, controls, pilots), `scenes/` (intro, menu, setup, arena, explorer), `ui/` |
 | `docs/` | [formats](docs/formats.md), [fighting](docs/fighting.md), [Lua API](docs/lua-api.md) |
-| `re/`, `tools/` | reverse engineering: unpacking `MASTER.DAT` for Ghidra ([re/README.md](re/README.md)) |
+| `platform/xenon/` | the Xbox 360: SDL drivers, LibXenon / xsdk platform code, the stand-in, package READMEs |
+| `re/`, `tools/` | reverse engineering: unpacking `MASTER.DAT` for Ghidra ([re/README.md](re/README.md)); the Aurora art generator |
 | `tests/` | format and Lua tests; `OMF_DATA=<folder> ctest` also decodes every original file |
 
 ## Testing

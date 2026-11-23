@@ -45,7 +45,7 @@ end
 
 function game.update(dt)
     -- F12 opens the asset explorer from anywhere (and closes it again).
-    if input.pressed("f12") and res.ready then
+    if input.pressed("f12") and res.ready and sys.platform ~= "xenon" then
         local top = scenes.top()
         if top == require("scenes.explorer") then
             if #scenes.stack > 1 then scenes.pop() else scenes.switch(require("scenes.menu")) end
@@ -59,6 +59,12 @@ end
 
 function game.draw()
     scenes.draw()
+end
+
+-- The host calls this after a script error in update/draw.
+function game.on_error(msg)
+    scenes.stack = {}
+    scenes.switch(require("scenes.error"), msg)
 end
 
 function game.shutdown()

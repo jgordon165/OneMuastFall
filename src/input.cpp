@@ -14,6 +14,7 @@ void Input::beginFrame() {
     last_.clear();
 }
 
+#ifndef OMF_XENON_LAYOUT
 static const char* padName(Uint8 b) {
     switch (b) {
         case SDL_CONTROLLER_BUTTON_A: return "pad_a";
@@ -32,6 +33,8 @@ static const char* padName(Uint8 b) {
     }
 }
 
+#endif
+
 void Input::handle(const SDL_Event& e) {
     switch (e.type) {
         case SDL_KEYDOWN: {
@@ -45,6 +48,9 @@ void Input::handle(const SDL_Event& e) {
             break;
         }
         case SDL_KEYUP: down_[keyName(e.key.keysym.sym)] = false; break;
+#ifndef OMF_XENON_LAYOUT
+        // (The Xbox 360's SDL has no game-controller module: its pads arrive
+        // as keyboard keys, platform/xenon/sdl/SDL_xenon_video.c.)
         case SDL_CONTROLLERDEVICEADDED:
             if (SDL_GameController* p = SDL_GameControllerOpen(e.cdevice.which)) pads_.push_back(p);
             break;
@@ -58,6 +64,7 @@ void Input::handle(const SDL_Event& e) {
         case SDL_CONTROLLERBUTTONUP:
             if (const char* n = padName(e.cbutton.button)) down_[n] = false;
             break;
+#endif
         default: break;
     }
 }

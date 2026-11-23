@@ -18,6 +18,13 @@ extern "C" {
 #include <sstream>
 
 #include "engine.h"
+#include "log.h"
+
+#ifdef OMF_XENON_LAYOUT
+extern "C" {
+#include "xenon_platform.h"
+}
+#endif
 #include "formats/af.h"
 #include "formats/altpal.h"
 #include "formats/bk.h"
@@ -503,7 +510,7 @@ std::string prefPath() {
     SDL_free(p);
     return s;
 }
-int sys_log(lua_State* L) { std::printf("%s\n", luaL_checkstring(L, 1)); std::fflush(stdout); return 0; }
+int sys_log(lua_State* L) { omfLog(luaL_checkstring(L, 1)); return 0; }
 int sys_ticks(lua_State* L) { lua_pushinteger(L, lua_Integer(SDL_GetTicks64())); return 1; }
 int sys_quit(lua_State*) { E->quit = true; return 0; }
 int sys_save(lua_State* L) {
@@ -575,7 +582,15 @@ void registerLuaApi(lua_State* L, Engine& e) {
 
     lua_getglobal(L, "sys");
     setStr(L, "data_path", e.dataArg);
+#ifdef OMF_XENON_LAYOUT
+    // "xenon" on the Xbox 360: controllers only, no keyboard; can_exit is
+    // false on the XeLL build, which has no dashboard to go back to.
+    setStr(L, "platform", "xenon");
+    setBool(L, "can_exit", xp_can_exit() != 0);
+#else
     setStr(L, "platform", SDL_GetPlatform());
+    setBool(L, "can_exit", true);
+#endif
     setBool(L, "headless", e.video.headless());
     setBool(L, "skip_intro", e.skipIntro);
     lua_pop(L, 1);
