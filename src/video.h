@@ -30,8 +30,12 @@ public:
     // Index 0 is transparent unless `opaque`. `remap`, when given, maps the
     // pixel underneath instead of drawing the sprite's own colour (the
     // original's glow / shadow tricks use the BK remap tables this way).
+    //
+    // palOffset/palLimit: indices <= palLimit become min(i + palOffset,
+    // palLimit) (player 2's HAR uses colours 48..95). opacity < 255 drops
+    // pixels in an ordered-dither pattern, like the original's fades.
     void blit(const omf::Image& img, int x, int y, bool flipX, bool flipY, bool opaque,
-              const uint8_t* remap = nullptr);
+              const uint8_t* remap = nullptr, int palOffset = 0, int palLimit = 255, int opacity = 255);
     // Sprite drawn as a solid colour (shadows, flashes).
     void blitColor(const omf::Image& img, int x, int y, bool flipX, bool flipY, uint8_t c);
     // Every pixel in the box goes through a remap table (the menus darken

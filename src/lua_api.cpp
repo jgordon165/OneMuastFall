@@ -333,7 +333,7 @@ int gfx_line(lua_State* L) {
                   int(luaL_checkinteger(L, 4)), col(L, 5));
     return 0;
 }
-// gfx.draw(img, x, y [, flip_x, flip_y, opaque, remap_string])
+// gfx.draw(img, x, y [, flip_x, flip_y, opaque, remap_string, pal_offset, pal_limit, opacity])
 int gfx_draw(lua_State* L) {
     auto& img = checkImage(L, 1);
     const uint8_t* remap = nullptr;
@@ -343,7 +343,8 @@ int gfx_draw(lua_State* L) {
         if (n < 256) remap = nullptr;
     }
     E->video.blit(img, int(luaL_checknumber(L, 2)), int(luaL_checknumber(L, 3)), lua_toboolean(L, 4),
-                  lua_toboolean(L, 5), lua_toboolean(L, 6), remap);
+                  lua_toboolean(L, 5), lua_toboolean(L, 6), remap, int(luaL_optinteger(L, 8, 0)),
+                  int(luaL_optinteger(L, 9, 255)), int(luaL_optinteger(L, 10, 255)));
     return 0;
 }
 int gfx_draw_color(lua_State* L) {

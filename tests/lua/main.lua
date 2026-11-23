@@ -91,5 +91,40 @@ do
     check(o.x > 40 and o.x < 70, "x= slides between frames (x=" .. tostring(o.x) .. ")")
 end
 
+-- ---- fighting ------------------------------------------------------------------------
+
+input = { down = function() return false end, pressed = function() return false end }
+do
+    local AI = require("game.ai")
+    -- "P6321": 1, 2, 3, 6 then punch, held on 6
+    local s = AI.inputs_for("P6321", 1)
+    check(#s == 6, "ai: motion + button + release")
+    check(s[1][1] == "1" and s[2][1] == "2" and s[3][1] == "3" and s[4][1] == "6", "ai: motion order")
+    check(s[5][1] == "6" and s[5][2] == true and not s[5][3], "ai: punch on the last direction")
+    -- facing left, forward is 4
+    local l = AI.inputs_for("K6", -1)
+    check(l[1][1] == "4" and l[2][3] == true, "ai: mirrored for a HAR facing left")
+    local b = AI.inputs_for("K", 1)
+    check(b[1][1] == "5" and b[2][3] == true, "ai: plain kick")
+end
+
+do
+    local H = require("game.har")
+    check(H.flip_input("6", -1) == "4" and H.flip_input("3", -1) == "1" and H.flip_input("8", -1) == "8",
+          "har: inputs mirror when facing left")
+    check(H.flip_input("6", 1) == "6", "har: unchanged facing right")
+end
+
+do
+    local control = require("game.control")
+    local c = control.scripted({ { "6" }, { "6", true }, { "5", false, true } })
+    local d, p, k = c:take()
+    check(d == "6" and not p and not k, "scripted controller step 1")
+    d, p, k = c:take()
+    check(p == true, "scripted controller punch")
+    d, p, k = c:take()
+    check(k == true and d == "5", "scripted controller kick")
+end
+
 if fails > 0 then error(fails .. " Lua test(s) failed") end
 print("all Lua tests passed")

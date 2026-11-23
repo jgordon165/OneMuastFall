@@ -6,6 +6,7 @@
 // Usage: onemustfall --data <OMF2097 folder> [--scale N] [--scripts <dir>]
 //                    [--skip-intro] [--explorer] [--smoke]
 //                    [--frames N] [--shot N file.bmp]... [--press N key]...
+//                    [--keydown N key] [--keyup N key]
 //                    (headless testing: run N frames, save frames, press keys)
 #include <SDL.h>
 
@@ -47,8 +48,11 @@ int main(int argc, char** argv) {
     long maxFrames = -1;
     bool explorer = false;
     bool smoke = false;
+    bool fight = false;
     std::vector<std::pair<long, std::string>> shots;
     std::vector<std::pair<long, std::string>> presses;
+    struct KeyEv { long frame; std::string key; bool down; };
+    std::vector<KeyEv> keyevs;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : ""; };
@@ -62,9 +66,13 @@ int main(int argc, char** argv) {
         } else if (a == "--press") {
             long f = std::atol(next().c_str());
             presses.emplace_back(f, next());
+        } else if (a == "--keydown" || a == "--keyup") {
+            long f = std::atol(next().c_str());
+            keyevs.push_back({f, next(), a == "--keydown"});
         } else if (a == "--screenshot") shots.emplace_back(-1, next());
         else if (a == "--skip-intro") eng.skipIntro = true;
         else if (a == "--explorer") explorer = true;
+        else if (a == "--fight") fight = true;
         else if (a == "--smoke") { smoke = true; if (maxFrames < 0) maxFrames = 1; }
         else if (a == "--help" || a == "-h") {
             std::printf(
@@ -101,6 +109,8 @@ int main(int argc, char** argv) {
     lua_setfield(L, -2, "explorer");
     lua_pushboolean(L, smoke);
     lua_setfield(L, -2, "smoke");
+    lua_pushboolean(L, fight);
+    lua_setfield(L, -2, "fight");
     lua_pop(L, 1);
     lua_getglobal(L, "package");
     lua_pushstring(L, (scripts + "/?.lua;" + scripts + "/?/init.lua").c_str());
@@ -126,6 +136,13 @@ int main(int argc, char** argv) {
                 eng.input.handle(k);
                 k.type = SDL_KEYUP;
                 eng.input.handle(k);
+            }
+        for (auto& k : keyevs)
+            if (k.frame == frame) {
+                SDL_Event e{};
+                e.type = k.down ? SDL_KEYDOWN : SDL_KEYUP;
+                e.key.keysym.sym = SDL_GetKeyFromName(k.key.c_str());
+                eng.input.handle(e);
             }
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
