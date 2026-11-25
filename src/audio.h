@@ -7,7 +7,7 @@
 
 #include <array>
 #include <cstdint>
-#include <mutex>
+#include "compat_mutex.h"
 #include <string>
 #include <vector>
 
@@ -65,5 +65,5 @@ private:
     bool musicOn_ = false, musicLoop_ = true;
     int musicVol_ = 70, soundVol_ = 100;
     std::vector<int16_t> musicBuf_;
-    mutable std::mutex m_;
+    mutable compat::Mutex m_;
 };

@@ -102,7 +102,8 @@ function M:draw()
         local tx = (l.key == "fight" or l.key == "back") and (x + (w - gfx.text_width(l.label, 1)) // 2) or (x + 10)
         gfx.text(l.label, tx, y + 8 + (i - 1) * 11, c, 1)
     end
-    local hint = "LEFT/RIGHT CHANGES  ENTER STARTS"
+    local hint = sys.platform == "xenon" and "LEFT/RIGHT CHANGES  A STARTS  BACK RETURNS"
+        or "LEFT/RIGHT CHANGES  ENTER STARTS"
     gfx.text(hint, (320 - gfx.text_width(hint, 1)) // 2, 190, ui.COLOR_INACTIVE, 1)
 end
 

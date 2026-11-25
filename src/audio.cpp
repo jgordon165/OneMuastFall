@@ -37,13 +37,13 @@ void Audio::shutdown() {
 }
 
 void Audio::setSounds(omf::SoundsFile sf) {
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     for (auto& v : voices_) v.active = false;
     sounds_ = std::move(sf);
 }
 
 int Audio::play(int id, const Opts& o) {
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     if (id < 0 || id >= int(sounds_.sounds.size()) || sounds_.sounds[size_t(id)].pcm.empty()) return -1;
     int ch = o.channel;
     if (ch < 0 || ch >= kChannels) {
@@ -78,18 +78,18 @@ int Audio::play(int id, const Opts& o) {
 }
 
 void Audio::stop(int channel) {
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     if (channel >= 0 && channel < kChannels) voices_[size_t(channel)].active = false;
 }
 
 void Audio::stopAll() {
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     for (auto& v : voices_) v.active = false;
 }
 
 bool Audio::playMusic(const omf::Bytes& module, bool loop) {
     if (!xmp_) return false;
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     auto ctx = static_cast<xmp_context>(xmp_);
     if (musicOn_) {
         xmp_end_player(ctx);
@@ -109,7 +109,7 @@ bool Audio::playMusic(const omf::Bytes& module, bool loop) {
 
 void Audio::stopMusic() {
     if (!xmp_) return;
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     if (!musicOn_) return;
     auto ctx = static_cast<xmp_context>(xmp_);
     xmp_end_player(ctx);
@@ -118,7 +118,7 @@ void Audio::stopMusic() {
 }
 
 bool Audio::musicPlaying() const {
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     return musicOn_;
 }
 
@@ -130,7 +130,7 @@ void Audio::callback(void* self, Uint8* stream, int len) {
 }
 
 void Audio::mix(int16_t* out, int frames) {
-    std::lock_guard<std::mutex> g(m_);
+    compat::Lock g(m_);
     std::vector<int32_t> acc(size_t(frames) * 2, 0);
     if (musicOn_) {
         musicBuf_.resize(size_t(frames) * 2);

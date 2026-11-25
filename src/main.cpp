@@ -24,7 +24,16 @@ extern "C" {
 }
 
 #include "engine.h"
+#include "log.h"
 #include "lua_api.h"
+
+#ifdef OMF_XENON_LAYOUT
+extern "C" {
+#include "xenon_platform.h"
+}
+#endif
+
+static std::string g_lastError;
 
 static bool callLua(lua_State* L, const char* fn, double arg, bool withArg) {
     lua_getglobal(L, "game");
@@ -34,7 +43,27 @@ static bool callLua(lua_State* L, const char* fn, double arg, bool withArg) {
     if (!lua_isfunction(L, -1)) { lua_pop(L, 1); return true; }
     if (withArg) lua_pushnumber(L, arg);
     if (lua_pcall(L, withArg ? 1 : 0, 0, 0) != LUA_OK) {
-        std::fprintf(stderr, "lua error in game.%s: %s\n", fn, lua_tostring(L, -1));
+        std::string msg = std::string("lua error in game.") + fn + ": " + lua_tostring(L, -1);
+        lua_pop(L, 1);
+        omfLog(msg);
+        g_lastError = msg;
+        return false;
+    }
+    return true;
+}
+
+// After a script error: show it on screen (scenes/error.lua) instead of
+// quitting to nothing, which on a console would be a black screen. Returns
+// false if even that fails.
+static bool showError(lua_State* L, const std::string& msg) {
+    lua_getglobal(L, "game");
+    if (!lua_istable(L, -1)) { lua_pop(L, 1); return false; }
+    lua_getfield(L, -1, "on_error");
+    lua_remove(L, -2);
+    if (!lua_isfunction(L, -1)) { lua_pop(L, 1); return false; }
+    lua_pushstring(L, msg.c_str());
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        omfLog(std::string("error screen failed: ") + lua_tostring(L, -1));
         lua_pop(L, 1);
         return false;
     }
@@ -88,14 +117,32 @@ int main(int argc, char** argv) {
         scripts = (base ? std::string(base) : std::string("./")) + "scripts";
         SDL_free(base);
     }
-    if (eng.dataArg.empty()) eng.dataArg = "data";
+    if (eng.dataArg.empty()) {
+#ifdef OMF_XENON_LAYOUT
+        // The Xbox 360 starts with no arguments: the game files go in data/
+        // in the port's folder (platform/xenon/README-xex.txt).
+        char* base = SDL_GetBasePath();
+        eng.dataArg = (base ? std::string(base) : std::string("./")) + "data";
+        SDL_free(base);
+#else
+        eng.dataArg = "data";
+#endif
+    }
     eng.data.mount(eng.dataArg);
+    omfLog("OneMuastFall " OMF_VERSION ": data " + eng.dataArg + ", scripts " + scripts);
 
     const bool headless = maxFrames >= 0;
     if (headless) SDL_setenv("SDL_AUDIODRIVER", "dummy", 1);
-    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) std::fprintf(stderr, "audio unavailable: %s\n", SDL_GetError());
-    if (SDL_Init((headless ? 0 : SDL_INIT_VIDEO) | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0) {
-        std::fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) omfLog(std::string("audio unavailable: ") + SDL_GetError());
+#ifdef OMF_XENON_LAYOUT
+    // The Xbox 360's SDL has no threads, so no game-controller subsystem
+    // (the pads arrive as keys).
+    const Uint32 sdlFlags = SDL_INIT_EVENTS;
+#else
+    const Uint32 sdlFlags = SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER;
+#endif
+    if (SDL_Init((headless ? 0 : SDL_INIT_VIDEO) | sdlFlags) != 0) {
+        omfLog(std::string("SDL_Init: ") + SDL_GetError());
         return 1;
     }
     if (!eng.video.init(scale, headless)) return 1;
@@ -118,10 +165,14 @@ int main(int argc, char** argv) {
     lua_pop(L, 1);
     const std::string mainLua = scripts + "/main.lua";
     if (luaL_dofile(L, mainLua.c_str()) != LUA_OK) {
-        std::fprintf(stderr, "failed to load %s: %s\n", mainLua.c_str(), lua_tostring(L, -1));
+        omfLog("failed to load " + mainLua + ": " + lua_tostring(L, -1));
         return 1;
     }
-    if (!callLua(L, "init", 0, false)) return 1;
+    bool failed = false;
+    if (!callLua(L, "init", 0, false)) {
+        if (headless || !showError(L, g_lastError)) return 1;
+        failed = true;
+    }
 
     Uint64 last = SDL_GetPerformanceCounter();
     const double freq = double(SDL_GetPerformanceFrequency());
@@ -163,8 +214,13 @@ int main(int argc, char** argv) {
             dt = std::min(100.0, double(now - last) * 1000.0 / freq);
             last = now;
         }
-        if (!callLua(L, "update", dt, true)) break;
-        if (!callLua(L, "draw", 0, false)) break;
+        if (!callLua(L, "update", dt, true) || !callLua(L, "draw", 0, false)) {
+            // one chance: the error screen; an error there ends the game
+            if (failed || headless) { failed = true; break; }
+            failed = true;
+            if (!showError(L, g_lastError)) break;
+            continue;
+        }
         eng.video.present();
         ++frame;
         for (auto& [f, path] : shots)
@@ -174,13 +230,25 @@ int main(int argc, char** argv) {
     }
     for (auto& [f, path] : shots)
         if (f < 0) eng.video.screenshot(path);
-    int rc = 0;
+    int rc = (failed && headless) ? 1 : 0;
     if (smoke) {   // --smoke: exit status says whether every animation ran
         lua_getglobal(L, "sys");
         lua_getfield(L, -1, "smoke_failed");
         rc = lua_toboolean(L, -1) ? 1 : 0;
         lua_pop(L, 2);
     }
+#ifdef OMF_XENON_LAYOUT
+    // On the Xbox 360 the title ends here and the console goes back to its
+    // dashboard (or dashboard.txt's program): a black frame, then the
+    // platform stops the sound and ends the title. Not a return from main,
+    // whose clean-up would run while the sound feeder is still mixing.
+    if (!headless && xp_can_exit()) {
+        eng.video.clear(0);
+        eng.video.darken(255);
+        eng.video.present();
+        xp_exit_title(rc);
+    }
+#endif
     callLua(L, "shutdown", 0, false);
     lua_close(L);
     eng.audio.shutdown();
