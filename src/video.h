@@ -47,7 +47,7 @@ public:
     // ---- text: the game's own fonts (GRAPHCHR 8x8, CHARSMAL 6x6) ----
     void setFont(int which, const omf::FontFile& f);   // 0 = big, 1 = small
     bool hasFont(int which) const { return fonts_[which & 1].size > 0; }
-    int text(const std::string& s, int x, int y, uint8_t c, int font, int shadow = -1);
+    int text(const std::string& s, int x, int y, uint8_t c, int font, int shadow = -1, int shadowDir = 1);
     int textWidth(const std::string& s, int font) const;
 
     // ---- palette ----

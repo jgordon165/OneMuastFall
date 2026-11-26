@@ -73,9 +73,14 @@ Enter; Esc jumps to QUIT. DEMO replays the intro.
 
 ### Fighting
 
-ONE PLAYER GAME or TWO PLAYER GAME opens the fight setup: pick each HAR
-and pilot (and the computer's level), the arena, the rounds and the game
-speed with Left/Right, then FIGHT!. Esc leaves a fight.
+ONE PLAYER GAME or TWO PLAYER GAME opens the original's selection screen
+(MELEE.BK): each player moves a blinking box over the ten pilot faces
+(red player 1, blue player 2) and picks with punch or kick; punch + kick
+together takes a pick back. Then the HAR page, the picked HAR animating in
+the pilot's colours, and the fight. In a one player game the computer
+takes a random other pilot and HAR. Esc goes back a page. GAMEPLAY in the
+main menu sets the computer's level, the arena (or random), the rounds and
+the game speed. Esc leaves a fight; after it you're back on the HAR page.
 
 | | Player 1 | Player 2 |
 |---|---|---|
@@ -128,7 +133,7 @@ layout on Linux, with the pad scripted (`XENON_SIM_PAD`, see
 |---|---|
 | `src/formats/` | decoders for the original files (no SDL; tested on their own) |
 | `src/` | the host: window and palette, mixer and music, input, Lua API |
-| `scripts/` | the game, in Lua: `core/` (animation player, scenes), `game/` (HARs, AI, controls, pilots), `scenes/` (intro, menu, setup, arena, explorer), `ui/` |
+| `scripts/` | the game, in Lua: `core/` (animation player, scenes), `game/` (HARs, AI, controls, pilots), `scenes/` (intro, menu, melee, gameplay, arena, explorer), `ui/` |
 | `docs/` | [formats](docs/formats.md), [fighting](docs/fighting.md), [Lua API](docs/lua-api.md) |
 | `platform/xenon/` | the Xbox 360: SDL drivers, LibXenon / xsdk platform code, the stand-in, package READMEs |
 | `re/`, `tools/` | reverse engineering: unpacking `MASTER.DAT` for Ghidra ([re/README.md](re/README.md)); the Aurora art generator |

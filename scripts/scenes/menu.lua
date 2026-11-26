@@ -25,12 +25,12 @@ function M:enter()
     })
     if not audio.music_playing() then audio.music("MENU.PSM", true) end
     self.menu = ui.new({
-        { label = "ONE PLAYER GAME", action = function() scenes.switch(require("scenes.setup"), { vs_ai = true }) end },
-        { label = "TWO PLAYER GAME", action = function() scenes.switch(require("scenes.setup"), { vs_ai = false }) end },
+        { label = "ONE PLAYER GAME", action = function() scenes.switch(require("scenes.melee"), { vs_ai = true }) end },
+        { label = "TWO PLAYER GAME", action = function() scenes.switch(require("scenes.melee"), { vs_ai = false }) end },
         { label = "TOURNAMENT PLAY", action = not_yet },
         { label = "NETWORK PLAY",    action = not_yet },
         { label = "CONFIGURATION",   action = not_yet },
-        { label = "GAMEPLAY",        action = not_yet },
+        { label = "GAMEPLAY",        action = function() scenes.switch(require("scenes.gameplay")) end },
         { label = "HELP",            action = not_yet },
         { label = "DEMO",            action = function() scenes.switch(require("scenes.intro")) end },
         { label = "SCOREBOARD",      action = not_yet },

@@ -23,7 +23,7 @@ Throws work the same way: the footer holds the victim at the thrower
 ## A tick
 
 Arena ticks are 8 + 60 − rate × 4 ms, where rate is the SPEED setting
-(0..10 on the setup screen, default 5) plus 5, as in OpenOMF: 28 ms at the
+(0..10 in GAMEPLAY, default 5) plus 5, as in OpenOMF: 28 ms at the
 default. Each tick:
 
 1. the arena: push overlapping HARs apart, round state (fade in, READY /

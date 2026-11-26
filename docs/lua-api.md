@@ -2,7 +2,9 @@
 
 The C++ host (`src/lua_api.cpp`) gives the game scripts these globals.
 Palettes and remap tables are byte strings (768 / 256 bytes, 8-bit RGB);
-images are userdata with `:w()`, `:h()` and `:pixel(x, y)`. Ids that the
+images are userdata with `:w()`, `:h()`, `:pixel(x, y)`, `:crop(x, y, w, h)`
+and `:map(table)` (a copy with each index i replaced by byte i of a
+256-byte string). Ids that the
 game numbers from 0 (animations, palettes, strings, photos, sounds) are
 0-based in the tables too.
 
@@ -33,7 +35,7 @@ A sprite is `{ x, y, w, h, index, missing, img }`.
 | `draw(img, x, y [, flip_x, flip_y, opaque, remap, pal_offset, pal_limit, opacity])` | index 0 is transparent unless `opaque`; with a remap string the pixels under the sprite are remapped instead; indices ≤ pal_limit become min(i + pal_offset, pal_limit) (player 2's HAR colours); opacity < 255 dithers |
 | `draw_color(img, x, y, flip_x, flip_y, c)` | the sprite's shape in one colour |
 | `remap_rect(x, y, w, h, remap [, rounds])` | remaps a box (the menu panels) |
-| `text(s, x, y [, c, font, shadow])` | font 0 = big (8x8), 1 = small (6x6); returns the end x |
+| `text(s, x, y [, c, font, shadow, shadow_dir])` | font 0 = big (8x8), 1 = small (6x6); the shadow falls bottom-right, or top-left with shadow_dir -1; returns the end x |
 | `text_width(s [, font])`, `has_fonts()` | |
 | `clip(x,y,w,h)`, `unclip()` | |
 | `set_base(rgb [, first])`, `base_color(i, r, g, b)` | the scene's base palette |
