@@ -11,6 +11,7 @@ extern "C" {
 
 #include <SDL.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <memory>
@@ -61,6 +62,36 @@ int image_pixel(lua_State* L) {
     auto& img = checkImage(L, 1);
     int x = int(luaL_checkinteger(L, 2)), y = int(luaL_checkinteger(L, 3));
     lua_pushinteger(L, (x >= 0 && y >= 0 && x < img.w && y < img.h) ? img.px[size_t(y) * img.w + x] : 0);
+    return 1;
+}
+
+// img:map(table) -> a copy with every index i replaced by table[i] (a
+// 256-byte string): dimmed/greyed copies of the selection portraits.
+int image_map(lua_State* L) {
+    auto& img = checkImage(L, 1);
+    size_t n = 0;
+    const char* t = luaL_checklstring(L, 2, &n);
+    if (n < 256) return luaL_error(L, "map table must be 256 bytes");
+    omf::Image out = img;
+    for (auto& v : out.px) v = uint8_t(t[v]);
+    pushImage(L, std::move(out));
+    return 1;
+}
+// img:crop(x, y, w, h) -> the part of the image in that box.
+int image_crop(lua_State* L) {
+    auto& img = checkImage(L, 1);
+    int x0 = int(luaL_checkinteger(L, 2)), y0 = int(luaL_checkinteger(L, 3));
+    int w = std::max(0, int(luaL_checkinteger(L, 4))), h = std::max(0, int(luaL_checkinteger(L, 5)));
+    omf::Image out;
+    out.w = w;
+    out.h = h;
+    out.px.assign(size_t(w) * h, 0);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            int sx = x0 + x, sy = y0 + y;
+            if (sx >= 0 && sy >= 0 && sx < img.w && sy < img.h) out.px[size_t(y) * w + x] = img.px[size_t(sy) * img.w + sx];
+        }
+    pushImage(L, std::move(out));
     return 1;
 }
 
@@ -374,7 +405,7 @@ int gfx_text(lua_State* L) {
     const char* s = luaL_checklstring(L, 1, &n);
     int end = E->video.text(std::string(s, n), int(luaL_checkinteger(L, 2)), int(luaL_checkinteger(L, 3)),
                             uint8_t(luaL_optinteger(L, 4, 255)), int(luaL_optinteger(L, 5, 0)),
-                            int(luaL_optinteger(L, 6, -1)));
+                            int(luaL_optinteger(L, 6, -1)), int(luaL_optinteger(L, 7, 1)));
     lua_pushinteger(L, end);
     return 1;
 }
@@ -544,7 +575,7 @@ void registerLuaApi(lua_State* L, Engine& e) {
     E = &e;
 
     luaL_newmetatable(L, kImage);
-    static const luaL_Reg imgm[] = {{"w", image_w}, {"h", image_h}, {"pixel", image_pixel}, {nullptr, nullptr}};
+    static const luaL_Reg imgm[] = {{"w", image_w}, {"h", image_h}, {"pixel", image_pixel}, {"map", image_map}, {"crop", image_crop}, {nullptr, nullptr}};
     lua_newtable(L);
     luaL_setfuncs(L, imgm, 0);
     lua_setfield(L, -2, "__index");

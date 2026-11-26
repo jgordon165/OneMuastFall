@@ -133,20 +133,24 @@ int Video::textWidth(const std::string& s, int font) const {
     return int(s.size()) * (f.size ? f.size : 8);
 }
 
-int Video::text(const std::string& s, int x, int y, uint8_t c, int font, int shadow) {
+int Video::text(const std::string& s, int x, int y, uint8_t c, int font, int shadow, int shadowDir) {
     const auto& f = fonts_[font & 1];
     if (!f.size) return x;
-    int cx = x;
-    for (unsigned char ch : s) {
-        for (int gy = 0; gy < f.size; ++gy)
-            for (int gx = 0; gx < f.size; ++gx)
-                if (f.pixel(ch, gx, gy)) {
-                    if (shadow >= 0) pset(cx + gx + 1, y + gy + 1, uint8_t(shadow));
-                    pset(cx + gx, y + gy, c);
-                }
-        cx += f.size;
+    const int sd = shadowDir < 0 ? -1 : 1;
+    // shadow first, so it never covers a neighbouring glyph pixel
+    for (int pass = shadow >= 0 ? 0 : 1; pass < 2; ++pass) {
+        int cx = x;
+        for (unsigned char ch : s) {
+            for (int gy = 0; gy < f.size; ++gy)
+                for (int gx = 0; gx < f.size; ++gx)
+                    if (f.pixel(ch, gx, gy)) {
+                        if (pass == 0) pset(cx + gx + sd, y + gy + sd, uint8_t(shadow));
+                        else pset(cx + gx, y + gy, c);
+                    }
+            cx += f.size;
+        }
     }
-    return cx;
+    return x + int(s.size()) * f.size;
 }
 
 void Video::setBase(int first, int count, const uint8_t* rgb) {
