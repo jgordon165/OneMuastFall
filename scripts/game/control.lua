@@ -1,7 +1,9 @@
 -- Fight controls. Every arena tick a controller gives the HAR its stick as
 -- a numpad digit in screen terms (8 up, 6 right, 3 down-right... 5 none)
 -- and whether punch / kick were pressed since the last tick. Presses are
--- latched per frame, since a tick is longer than a frame.
+-- latched per frame, since a tick is longer than a frame, and so are the
+-- stick positions passed through on the way (a quarter circle can take less
+-- than a tick).
 --
 -- Default keys, as OpenOMF's:
 --   player 1  arrows, Home/PgUp/End/PgDn diagonals, Enter punch, Right Shift kick
@@ -33,22 +35,14 @@ local Keyboard = {}
 Keyboard.__index = Keyboard
 
 function M.keyboard(player)
-    return setmetatable({ keys = M.KEYS[player], punch = false, kick = false }, Keyboard)
-end
-
---- Called every frame: remember presses until the next tick.
-function Keyboard:poll()
-    local k = self.keys
-    if any(k.punch, input.pressed) then self.punch = true end
-    if any(k.kick, input.pressed) then self.kick = true end
+    return setmetatable({ keys = M.KEYS[player], punch = false, kick = false, seen = {} }, Keyboard)
 end
 
 local DIRS = { [-1] = { [-1] = "7", [0] = "4", [1] = "1" }, [0] = { [-1] = "8", [0] = "5", [1] = "2" },
                [1] = { [-1] = "9", [0] = "6", [1] = "3" } }
 M.DIRS = DIRS
 
---- Called every tick: dir, punch, kick.
-function Keyboard:take()
+function Keyboard:stick()
     local k, d = self.keys, input.down
     local x, y = 0, 0
     if any(k.left, d) then x = x - 1 end
@@ -59,9 +53,29 @@ function Keyboard:take()
     if any(k.up_right, d) then x, y = 1, -1 end
     if any(k.down_left, d) then x, y = -1, 1 end
     if any(k.down_right, d) then x, y = 1, 1 end
+    return DIRS[x][y]
+end
+
+--- Called every frame: remember presses and stick positions until the
+--- next tick.
+function Keyboard:poll()
+    local k = self.keys
+    if any(k.punch, input.pressed) then self.punch = true end
+    if any(k.kick, input.pressed) then self.kick = true end
+    local s = self:stick()
+    if s ~= self.seen[#self.seen] then self.seen[#self.seen + 1] = s end
+end
+
+--- Called every tick: dir, punch, kick, and the stick positions passed
+--- through since the last tick (oldest first, not counting `dir`).
+function Keyboard:take()
+    local dir = self:stick()
+    local between = self.seen
+    if between[#between] == dir then between[#between] = nil end
+    self.seen = {}
     local p, kk = self.punch, self.kick
     self.punch, self.kick = false, false
-    return DIRS[x][y], p, kk
+    return dir, p, kk, between
 end
 
 --- A scripted controller (tests, demos): a list of {dir, punch, kick} per tick.

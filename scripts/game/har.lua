@@ -326,6 +326,16 @@ local function change_state(old, can_jump, c)
     return nil
 end
 
+--- A stick position the controller saw between ticks: into the move
+--- buffer only (no walking or jumping from it).
+function H.push_input(o, dir)
+    local h = o.h
+    if add_input(h, dir) then
+        h.input_change_tick = o.ctx.tick
+        h.last_input = flip_input(h.inputs:sub(1, 1), o.dir)
+    end
+end
+
 --- One tick of input. `dir` is the stick as a numpad digit in screen terms
 --- ("6" = right, "5" = nothing); punch/kick: pressed this tick.
 function H.act(o, dir, punch, kick)

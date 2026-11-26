@@ -9,8 +9,10 @@
 --   * a defeat ends the round: the loser falls, the winner poses, YOU WIN /
 --     YOU LOSE, a fade out, then the next round or the end of the match
 --
--- The arena's tick is slower than a scene's: 8 + 60 − speed / 15 × 60 ms
--- (speed 0..10, default 5 → 48 ms), as in OpenOMF.
+-- The arena's tick is slower than a scene's: 8 + 60 − rate / 15 × 60 ms,
+-- where rate is the speed setting (0..10, default 5) + 5, as in OpenOMF's
+-- game_state: 28 ms at the default speed. A KO slows the next 12 ticks to
+-- rate − 10 (68 ms).
 --
 -- args: { players = { {har=0..10, pilot=<pilots entry>, ai=difficulty|nil}, {...} },
 --         arena = 0..4, rounds = 1|3|5, speed = 0..10, on_done = function(winner) }
@@ -41,7 +43,8 @@ function M:enter(args)
     self.bk = setmetatable({ sound_table = {} }, { __index = bk })
     for k, v in pairs(bk.sound_table) do self.bk.sound_table[k] = v end
     self.speed = args.speed or 5
-    self.tick_ms = 8 + 60 - (self.speed / 15) * 60
+    self.rate = self.speed + 5
+    self.ms_per_tick = M.tick_ms(self.rate)
     self.rounds = args.rounds or 1
     self.round = 0
     self.wins = { 0, 0 }
@@ -104,6 +107,10 @@ function M:reset_round()
             if a then self:add_bk(a, a.start_x, a.start_y, LAYER_BOTTOM).repeat_ = true end
         end
     end
+end
+
+function M.tick_ms(rate)
+    return 8 + 60 - (math.max(rate, 0) / 15) * 60
 end
 
 -- ---- objects ------------------------------------------------------------------------
@@ -338,7 +345,9 @@ function M:scene_tick()
         elseif defeated_at_rest(h2) and needs_victory_pose(h1) then
             H.face_enemy(h1, h2); H.set_ani(h1, H.ANIM.VICTORY, false)
         end
-        if self.win_state and self.win_state ~= "done" and (defeated_at_rest(h1) or defeated_at_rest(h2)) then
+        -- win_state: "win" / "lose" until the loser lies still, then the
+        -- banner once ("shown"), then "done" when it has played
+        if (self.win_state == "win" or self.win_state == "lose") and (defeated_at_rest(h1) or defeated_at_rest(h2)) then
             self:announce(self.win_state == "win" and 9 or 8, nil, function() self.win_state = "done" end)
             self.win_state = "shown"
         elseif self.win_state == "shown" then
@@ -423,7 +432,12 @@ function M:step()
     if self.done then return end
 
     for i = 1, 2 do
-        local dir, punch, kick = self.ctrl[i]:take()
+        local dir, punch, kick, between = self.ctrl[i]:take()
+        -- stick positions passed through since the last tick go into the
+        -- move buffer too, so a fast motion isn't lost between ticks
+        if between then
+            for _, d in ipairs(between) do H.push_input(self.hars[i], d) end
+        end
         H.act(self.hars[i], dir, punch, kick)
     end
 
@@ -467,7 +481,7 @@ function M:update(dt)
     self.acc = self.acc + dt
     local n = 0
     while not self.done and n < 20 do
-        local ms = self.tick_ms * (self.slow_ticks > 0 and 1.6 or 1)
+        local ms = self.slow_ticks > 0 and M.tick_ms(self.rate - 10) or self.ms_per_tick
         if self.acc < ms then break end
         self.acc = self.acc - ms
         if self.slow_ticks > 0 then self.slow_ticks = self.slow_ticks - 1 end
