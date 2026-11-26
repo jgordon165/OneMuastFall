@@ -19,7 +19,7 @@ local ROUNDS = { 1, 3, 5 }
 local DIFFICULTY = { "PUNCHING BAG", "ROOKIE", "VETERAN", "WORLD CLASS", "CHAMPION" }
 
 -- remembered between visits
-local choice = { har = { 0, 1 }, pilot = { 1, 2 }, arena = 0, rounds = 2, difficulty = 3 }
+local choice = { har = { 0, 1 }, pilot = { 1, 2 }, arena = 0, rounds = 2, difficulty = 3, speed = 5 }
 
 function M:enter(args)
     self.vs_ai = args and args.vs_ai
@@ -42,6 +42,7 @@ function M:lines()
     l[#l + 1] = { key = "arena", label = "ARENA     " .. ARENAS[choice.arena] }
     l[#l + 1] = { key = "rounds", label = "ROUNDS    " .. (ROUNDS[choice.rounds] == 1 and "ONE ROUND" or
         ("BEST " .. (ROUNDS[choice.rounds] // 2 + 1) .. " OF " .. ROUNDS[choice.rounds])) }
+    l[#l + 1] = { key = "speed", label = "SPEED     " .. string.rep("#", choice.speed) .. string.rep(".", 10 - choice.speed) }
     l[#l + 1] = { key = "fight", label = "FIGHT!" }
     l[#l + 1] = { key = "back", label = "BACK" }
     return l
@@ -56,7 +57,8 @@ function M:change(key, d)
     elseif key == "pilot2" then choice.pilot[2] = cycle(choice.pilot[2], d, 1, #pilots)
     elseif key == "arena" then choice.arena = cycle(choice.arena, d, 0, 4)
     elseif key == "rounds" then choice.rounds = cycle(choice.rounds, d, 1, #ROUNDS)
-    elseif key == "difficulty" then choice.difficulty = cycle(choice.difficulty, d, 1, #DIFFICULTY) end
+    elseif key == "difficulty" then choice.difficulty = cycle(choice.difficulty, d, 1, #DIFFICULTY)
+    elseif key == "speed" then choice.speed = math.max(0, math.min(10, choice.speed + d)) end
 end
 
 function M:fight()
@@ -64,6 +66,7 @@ function M:fight()
     scenes.switch(require("scenes.arena"), {
         arena = choice.arena,
         rounds = ROUNDS[choice.rounds],
+        speed = choice.speed,
         players = {
             { har = choice.har[1], pilot = pilots[choice.pilot[1]] },
             { har = choice.har[2], pilot = pilots[choice.pilot[2]], ai = vs_ai and choice.difficulty or nil },

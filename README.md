@@ -74,8 +74,8 @@ Enter; Esc jumps to QUIT. DEMO replays the intro.
 ### Fighting
 
 ONE PLAYER GAME or TWO PLAYER GAME opens the fight setup: pick each HAR
-and pilot (and the computer's level), the arena and the rounds with
-Left/Right, then FIGHT!. Esc leaves a fight.
+and pilot (and the computer's level), the arena, the rounds and the game
+speed with Left/Right, then FIGHT!. Esc leaves a fight.
 
 | | Player 1 | Player 2 |
 |---|---|---|

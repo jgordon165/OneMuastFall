@@ -126,5 +126,29 @@ do
     check(k == true and d == "5", "scripted controller kick")
 end
 
+do
+    -- the keyboard keeps the stick positions passed between two ticks
+    local control = require("game.control")
+    local held = {}
+    input = { down = function(k) return held[k] == true end,
+              pressed = function(k) return held[k] == "pressed" end }
+    local kb = control.keyboard(1)
+    held = { down = true }; kb:poll()                    -- 2
+    held = { down = true, right = true }; kb:poll()      -- 3
+    held = { right = true, ["return"] = "pressed" }; kb:poll()   -- 6 + punch
+    local d, p, k, between = kb:take()
+    check(d == "6" and p == true and not k, "keyboard: last stick + punch")
+    check(#between == 2 and between[1] == "2" and between[2] == "3", "keyboard: 2, 3 kept for the move buffer")
+    local d2, p2, _, b2 = kb:take()
+    check(d2 == "6" and not p2 and #b2 == 0, "keyboard: latches cleared after a tick")
+end
+
+do
+    -- OpenOMF's arena tick: 28 ms at the default speed (5 + 5), 68 ms in a KO slow-down
+    local arena = require("scenes.arena")
+    check(arena.tick_ms(10) == 28, "arena: 28 ms ticks at speed 5")
+    check(arena.tick_ms(0) == 68, "arena: 68 ms in the slow-down")
+end
+
 if fails > 0 then error(fails .. " Lua test(s) failed") end
 print("all Lua tests passed")

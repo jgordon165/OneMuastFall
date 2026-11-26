@@ -22,8 +22,9 @@ Throws work the same way: the footer holds the victim at the thrower
 
 ## A tick
 
-Arena ticks are 8 + 60 − speed × 4 ms (48 ms at the default speed 5). Each
-tick:
+Arena ticks are 8 + 60 − rate × 4 ms, where rate is the SPEED setting
+(0..10 on the setup screen, default 5) plus 5, as in OpenOMF: 28 ms at the
+default. Each tick:
 
 1. the arena: push overlapping HARs apart, round state (fade in, READY /
    ROUND n, FIGHT at tick 90; after a KO, victory pose, YOU WIN / LOSE,
@@ -37,12 +38,13 @@ tick:
 6. every object applies its frame
 
 A hit with the `cp` tag pauses the game for 4 ticks; a KO slows the next
-12 ticks.
+12 ticks to rate − 10 (68 ms).
 
 ## Moves from the stick
 
 Each tick the stick direction goes into a 10-entry buffer (newest first,
-only when it changes). A move string like `P6321` means: punch, with the
+only when it changes); positions the stick passed through between two
+ticks go in too, so a fast motion isn't lost. A move string like `P6321` means: punch, with the
 newest directions being 6, 3, 2, 1 (a quarter circle forward from back,
 then punch), relative to where the HAR faces. Moves are tried in id order;
 punch and kick stay "pressed" for 3 ticks, and the motion has to be
