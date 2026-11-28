@@ -75,12 +75,39 @@ pilot's endurance, speeds and jumps with agility.
 ## The HUD
 
 Health (8 px) and stun (4 px, flashes under half) bars at the top, pilot
-and HAR names under them, round tokens beside them (BK animation 27).
+and HAR names under them, round tokens beside them (BK animation 27), and
+a human player's score under the names.
+
+## Score and the announcer
+
+From the original (MASTER.DAT's fight loop and its score routine);
+`game/score.lua`. Every number is x the multiplier: (level + 1) x 20
+against the computer (PUNCHING BAG 20 .. CHAMPION 100, DEADLY 150,
+ULTIMATE 200), 100 between two players.
+
+| | when | points |
+|---|---|---|
+| a hit | every hit that lands | the move's `points` (AF) |
+| *n* CONSECUTIVE HITS | the other side lands one after more than 3 in a row | those hits' points again |
+| *n* HIT COMBO | the other HAR recovers after 2+ hits | those hits' points x 4 |
+| PERFECT ROUND | won a round against the computer at full health | 2,000 |
+| VITALITY | won a round against the computer | health % x 20 |
+| SCRAP BONUS / DESTRUCTION BONUS | the finishing move | 1,000 / 2,000 |
+
+The texts (ENGLISH.DAT 201-206) appear over the HAR, hang there for 25
+ticks, then slide one after another into the score, where their points
+are added; the fade at the end of a round waits for them. The computer
+gets its callouts but no points.
+
+The one player score carries from fight to fight; losing, or leaving the
+pilot page, ends the run, and a score that makes the top 20 goes to the
+SCOREBOARD (`scenes/scoreboard.lua`, `game/scores.lua`) for a name.
+SCORES.DAT keeps a page per ROUNDS setting.
 
 ## Not done yet
 
-* the original's HAR select (MELEE.BK), the vs screen, tournament mode,
-  scrap/destruction finishing moves' full flow, score and points
+* the vs screen, the newsroom and the one player opponent ladder,
+  tournament mode, scrap/destruction finishing moves' full flow
 * arena hazards (the stadium's lights, the power plant's walls, the
   desert's planes...) and wall damage
 * HAR shadows, screen shake, the stadium's positional lighting,
