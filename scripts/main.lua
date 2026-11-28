@@ -10,6 +10,7 @@ local res    = require("game.res")
 game = {}
 
 function game.init()
+    require("game.settings").load()
     sys.log("data folder: " .. sys.data_path .. (fs.mounted() and "" or " (NOT FOUND)"))
     local report = res.check()
     for _, line in ipairs(report.log) do sys.log(line) end

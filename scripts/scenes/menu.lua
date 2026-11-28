@@ -29,7 +29,7 @@ function M:enter()
         { label = "TWO PLAYER GAME", action = function() scenes.switch(require("scenes.melee"), { vs_ai = false }) end },
         { label = "TOURNAMENT PLAY", action = not_yet },
         { label = "NETWORK PLAY",    action = not_yet },
-        { label = "CONFIGURATION",   action = not_yet },
+        { label = "CONFIGURATION",   action = function() scenes.switch(require("scenes.configuration")) end },
         { label = "GAMEPLAY",        action = function() scenes.switch(require("scenes.gameplay")) end },
         { label = "HELP",            action = not_yet },
         { label = "DEMO",            action = function() scenes.switch(require("scenes.intro")) end },

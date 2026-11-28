@@ -63,6 +63,17 @@ public:
     std::array<uint8_t, 768>& work() { return work_; }
     const std::array<uint8_t, 768>& base() const { return base_; }
 
+    // ---- upscaling (ADVANCED SETTINGS) ----
+    // While marking is on, drawn pixels count as sprite pixels: the
+    // upscaler's "sprites only" target. Anything else drawn over them
+    // clears the mark.
+    void setMarking(bool on) { marking_ = on; }
+    // factor 1..4; smoothing 0 off, 1 sprites, 2 everything (see
+    // upscale.h); soft stretches the result to the window with linear
+    // filtering instead of nearest; sharpen 0 off .. 3 strong.
+    void setUpscale(int factor, int smoothing, bool soft, int sharpen = 0);
+    int upscaleFactor() const { return factor_; }
+
     // ---- output ----
     void present();
     bool screenshot(const std::string& path) const;
@@ -79,6 +90,13 @@ private:
     SDL_Renderer* renderer_ = nullptr;
     SDL_Texture* texture_ = nullptr;
     std::vector<uint32_t> rgba_ = std::vector<uint32_t>(W * H, 0);
+    std::vector<uint8_t> mask_ = std::vector<uint8_t>(W * H, 0);
+    std::vector<uint32_t> big_;   // the upscaled frame
+    bool marking_ = false;
+    int factor_ = 1, smoothing_ = 0, sharpen_ = 0, texW_ = W, texH_ = H;
+    const uint32_t* shown_ = nullptr;   // the frame last presented, shownW_ x shownH_
+    int shownW_ = W, shownH_ = H;
+    bool soft_ = false;
     bool headless_ = false;
     bool fullscreen_ = false;
 };
