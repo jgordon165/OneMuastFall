@@ -94,6 +94,22 @@ motions from the AF files (the asset explorer shows each move's input).
 
 The picture is the original's 320×200 shown at 4:3, as on a DOS monitor.
 
+### Advanced settings
+
+CONFIGURATION > ADVANCED SETTINGS changes how the picture is drawn
+(saved as `advanced.cfg` in your preferences folder; all off by default):
+
+| Setting | Choices | What it does |
+|---|---|---|
+| UPSCALE | OFF, 2X, 3X, 4X | draw the frame at 2–4× before it's stretched to the window |
+| SMOOTHING | OFF, SPRITES, EVERYTHING | needs UPSCALE: rounds off jagged edges. SPRITES anti-aliases the fighters' and animations' outlines and diagonal colour edges on them, leaving their shading and the backgrounds as drawn; EVERYTHING also smooths colour edges across the whole picture |
+| SHARPEN | OFF, LOW, MEDIUM, HIGH | crispens detail (an unsharp mask, applied last) |
+| SCREEN | SHARP, SOFT | SOFT blends pixels when stretching to the window, so there's no uneven pixel width at odd window sizes |
+
+`OMF_UPSCALE=factor,smoothing,soft,sharpen` (e.g. `3,1,1,2`) overrides
+them for one run. The filters run on the CPU each frame: on a PC, about
+2 ms for 3× SPRITES and 4–5 ms for EVERYTHING or 4× sharpening.
+
 ### Asset explorer
 
 Up/Down (or a letter) to pick a file, Enter to open, Esc back.

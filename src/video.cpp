@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "upscale.h"
+
 bool Video::init(int scale, bool headless) {
     headless_ = headless;
     if (headless) return true;
@@ -33,10 +35,16 @@ void Video::shutdown() {
     window_ = nullptr;
 }
 
-void Video::clear(uint8_t c) { std::fill(fb_.begin(), fb_.end(), c); }
+void Video::clear(uint8_t c) {
+    std::fill(fb_.begin(), fb_.end(), c);
+    std::fill(mask_.begin(), mask_.end(), 0);
+}
 
 void Video::pset(int x, int y, uint8_t c) {
-    if (x >= cx0_ && y >= cy0_ && x < cx1_ && y < cy1_) fb_[size_t(y) * W + x] = c;
+    if (x >= cx0_ && y >= cy0_ && x < cx1_ && y < cy1_) {
+        fb_[size_t(y) * W + x] = c;
+        mask_[size_t(y) * W + x] = 0;
+    }
 }
 
 uint8_t Video::pget(int x, int y) const {
@@ -47,8 +55,10 @@ uint8_t Video::pget(int x, int y) const {
 void Video::fill(int x, int y, int w, int h, uint8_t c) {
     int x0 = std::max(x, cx0_), y0 = std::max(y, cy0_);
     int x1 = std::min(x + w, cx1_), y1 = std::min(y + h, cy1_);
-    for (int yy = y0; yy < y1; ++yy)
+    for (int yy = y0; yy < y1; ++yy) {
         std::fill(fb_.begin() + yy * W + x0, fb_.begin() + yy * W + std::max(x0, x1), c);
+        std::fill(mask_.begin() + yy * W + x0, mask_.begin() + yy * W + std::max(x0, x1), 0);
+    }
 }
 
 void Video::rect(int x, int y, int w, int h, uint8_t c) {
@@ -89,8 +99,10 @@ void Video::blit(const omf::Image& img, int x, int y, bool flipX, bool flipY, bo
             if (!c && !opaque) continue;
             if (dither && bayer[dy & 3][dx & 3] >= level) continue;
             if (c && c <= palLimit) c = uint8_t(std::min(c + palOffset, palLimit));
-            uint8_t& d = fb_[size_t(dy) * W + dx];
+            const size_t at = size_t(dy) * W + dx;
+            uint8_t& d = fb_[at];
             d = remap ? remap[d] : c;
+            if (!remap) mask_[at] = marking_;
         }
     }
 }
@@ -204,13 +216,40 @@ void Video::darken(int step) {
     for (auto& c : work_) c = uint8_t((c * inv) >> 8);
 }
 
+void Video::setUpscale(int factor, int smoothing, bool soft, int sharpen) {
+    factor_ = std::clamp(factor, 1, 4);
+    sharpen_ = std::clamp(sharpen, 0, 3);
+    smoothing_ = std::clamp(smoothing, 0, 2);
+    soft_ = soft;
+}
+
 void Video::present() {
     for (size_t i = 0; i < fb_.size(); ++i) {
         const uint8_t* c = &work_[size_t(fb_[i]) * 3];
         rgba_[i] = 0xFF000000u | (uint32_t(c[0]) << 16) | (uint32_t(c[1]) << 8) | c[2];
     }
+    const uint32_t* frame = rgba_.data();
+    int fw = W, fh = H;
+    if (factor_ > 1 || sharpen_ > 0) {
+        upscale::scale(rgba_.data(), mask_.data(), W, H, factor_, smoothing_ > 0, smoothing_ == 2, big_);
+        fw = W * factor_;
+        fh = H * factor_;
+        static const int kSharpen[4] = {0, 96, 176, 256};
+        upscale::sharpen(big_, fw, fh, kSharpen[sharpen_]);
+        frame = big_.data();
+    }
+    shown_ = frame;
+    shownW_ = fw;
+    shownH_ = fh;
     if (headless_) return;
-    SDL_UpdateTexture(texture_, nullptr, rgba_.data(), W * 4);
+    if (fw != texW_ || fh != texH_) {
+        SDL_DestroyTexture(texture_);
+        texture_ = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, fw, fh);
+        texW_ = fw;
+        texH_ = fh;
+    }
+    SDL_SetTextureScaleMode(texture_, soft_ ? SDL_ScaleModeLinear : SDL_ScaleModeNearest);
+    SDL_UpdateTexture(texture_, nullptr, frame, fw * 4);
     int ow = 0, oh = 0;
     SDL_GetRendererOutputSize(renderer_, &ow, &oh);
     // 4:3, as mode 13h filled a DOS monitor.
@@ -224,8 +263,11 @@ void Video::present() {
 }
 
 bool Video::screenshot(const std::string& path) const {
-    SDL_Surface* s = SDL_CreateRGBSurfaceWithFormatFrom(const_cast<uint32_t*>(rgba_.data()), W, H, 32, W * 4,
-                                                       SDL_PIXELFORMAT_ARGB8888);
+    // what was shown: the upscaled / sharpened frame when those are on
+    const bool big = shown_ && shown_ == big_.data();
+    const int w = big ? shownW_ : W, h = big ? shownH_ : H;
+    SDL_Surface* s = SDL_CreateRGBSurfaceWithFormatFrom(const_cast<uint32_t*>(big ? big_.data() : rgba_.data()), w,
+                                                       h, 32, w * 4, SDL_PIXELFORMAT_ARGB8888);
     if (!s) return false;
     bool ok = SDL_SaveBMP(s, path.c_str()) == 0;
     SDL_FreeSurface(s);

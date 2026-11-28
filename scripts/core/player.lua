@@ -400,7 +400,9 @@ function P.draw(o, glow_remap)
     local op = P.opacity(o)
     if op <= 0 then return end
     local remap = (o.rs.glow and glow_remap) or nil
+    gfx.mark(true)   -- a sprite, for the upscaler's "sprites only"
     gfx.draw(sp.img, math.floor(x), math.floor(y), fx, fy, false, remap, o.pal_offset, o.pal_limit, op)
+    gfx.mark(false)
 end
 
 --- This frame's palette trick (bps/bpn/bpd/bpp/bpb/bz), applied to the
