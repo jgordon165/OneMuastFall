@@ -167,6 +167,15 @@ with table 4.
 Photos are drawn in the scene's palette (their own 48 colours are the
 pilot's HAR colours).
 
+## TRN (tournaments)
+
+A 300-byte header, a list of enemy offsets, each enemy's 428-byte pilot
+block (XOR key 0xAC, +1 per byte) and 10 quotes, then 10 locale logos,
+colours 128..167, the PIC name, the titles and descriptions, and the
+ending texts (10 locales x 11 HARs x 10 pages). Details and what the
+fields mean: [tournament.md](tournament.md). `src/formats/trn.cpp`,
+`omf.trn(name)`.
+
 ## SOUNDS.DAT
 
     u32  0
