@@ -25,6 +25,7 @@ local control = require("game.control")
 local pilots  = require("game.pilots")
 local scenes  = require("core.scenes")
 local res     = require("game.res")
+local Score   = require("game.score")
 
 local M = {}
 
@@ -69,6 +70,17 @@ function M:enter(args)
     end
     self.hars[1].enemy, self.hars[2].enemy = self.hars[2], self.hars[1]
 
+    -- scores: carried in from earlier fights (players[i].score), points x the
+    -- multiplier of the computer's level, or 100 between two players
+    local p1, p2 = args.players[1], args.players[2]
+    local level = (p1.ai == nil) ~= (p2.ai == nil) and (p1.ai or p2.ai) or nil
+    local mult = Score.multiplier(level)
+    self.scores = {
+        Score.new(1, p1.ai == nil and not p1.controller, mult, p1.score),
+        Score.new(2, p2.ai == nil and not p2.controller, mult, p2.score),
+    }
+    self.vs_computer = level ~= nil
+
     audio.music("ARENA" .. self.arena_id .. ".PSM", true)
     self:reset_round()
 end
@@ -94,6 +106,11 @@ end
 function M:reset_round()
     self.state, self.state_ticks = "starting", 0
     self.over, self.winner, self.win_state = false, nil, nil
+    self.finisher_called, self.stunned = false, { false, false }
+    for i = 1, 2 do
+        local sc = self.scores[i]
+        sc.cons_hits, sc.cons_points, sc.combo_hits, sc.combo_points = 0, 0, 0, 0
+    end
     -- clear projectiles, scrap and announcements
     self.objects, self.pending = {}, {}
     for i = 1, 2 do H.reset(self.hars[i], START_POS[i], START_DIR[i]) end
@@ -261,6 +278,13 @@ function M:event(kind, o, move)
         sys.log(string.format("t%d %s p%d move %s hp %d/%d end %d/%d", self.tick, kind, o.h.player_id + 1,
             move and move.id or "-", o.h.health, o.h.health_max, o.h.endurance, o.h.endurance_max))
     end
+    if kind == "hit" and move then
+        -- the announcer: the attacker scores, the one hit loses their run
+        local victim = o.h.player_id + 1
+        local att = 3 - victim
+        self.scores[att]:hit(move.points or 0)
+        self.scores[victim]:interrupted(self:callout_pos(victim))
+    end
     if kind == "defeat" and self.state ~= "ending" then
         self.state, self.state_ticks = "ending", 0
         self:defeat(o.h.player_id)
@@ -276,6 +300,15 @@ function M:defeat(loser)
     elseif args.players[1].ai and args.players[2].ai then self.win_state = "lose"
     else self.win_state = "win" end
     self.wins[winner + 1] = self.wins[winner + 1] + 1
+    -- the round's streaks, then the winner's PERFECT ROUND / VITALITY
+    for i = 1, 2 do
+        self.scores[i]:end_combo(self:callout_pos(i))
+        self.scores[i]:interrupted(self:callout_pos(i))
+    end
+    local ws = self.scores[winner + 1]
+    if ws.human and self.vs_computer then
+        ws:victory(math.max(0, math.floor(w.h.health * 100 / w.h.health_max)), self:callout_pos(winner + 1))
+    end
     if self.wins[winner + 1] >= math.ceil(self.rounds / 2) then
         w.h.state = H.STATE.VICTORY
         self.over, self.winner = true, winner
@@ -320,7 +353,35 @@ function M:announce(id, sprite, on_done)
     return o
 end
 
+-- where a side's callouts start: over its HAR's head
+function M:callout_pos(i)
+    local o = self.hars[i]
+    return math.max(40, math.min(280, o.x)), math.max(40, o.y - 75)
+end
+
+local STUN = { [H.STATE.RECOIL] = true, [H.STATE.STUNNED] = true, [H.STATE.WALLDAMAGE] = true,
+               [H.STATE.STANDING_UP] = true }
+
+function M:score_tick()
+    for i = 1, 2 do
+        local o = self.hars[i]
+        local stunned = STUN[o.h.state] or false
+        -- back in control: the other side's combo is over
+        if self.stunned[i] and not stunned and o.h.health > 0 then
+            self.scores[3 - i]:end_combo(self:callout_pos(3 - i))
+        end
+        self.stunned[i] = stunned
+        -- the finishing move
+        if not self.finisher_called and (o.h.state == H.STATE.SCRAP or o.h.state == H.STATE.DESTRUCTION) then
+            self.finisher_called = true
+            self.scores[i]:finisher(o.h.state == H.STATE.SCRAP and "scrap" or "destruction", self:callout_pos(i))
+        end
+        self.scores[i]:tick()
+    end
+end
+
 function M:scene_tick()
+    self:score_tick()
     self:push_players()
     self.state_ticks = self.state_ticks + 1
     local h1, h2 = self.hars[1], self.hars[2]
@@ -355,6 +416,10 @@ function M:scene_tick()
         elseif self.win_state == "shown" then
             if self.state_ticks > 50 then self.state_ticks = 50 end
         end
+        -- let the announcer finish before the fade
+        if self.state_ticks > 80 and (self.scores[1]:busy() or self.scores[2]:busy()) then
+            self.state_ticks = 80
+        end
         if self.state_ticks >= 80 + CROSSFADE then
             if self.over then
                 self:finish_match()
@@ -374,7 +439,8 @@ end
 function M:finish_match()
     self.done = true
     local cb = self.args.on_done
-    if cb then cb(self.winner) else scenes.switch(require("scenes.menu")) end
+    if cb then cb(self.winner, { self.scores[1].total, self.scores[2].total })
+    else scenes.switch(require("scenes.menu")) end
 end
 
 local function move_object(o)
@@ -534,6 +600,8 @@ function M:draw_hud()
             gfx.text(name, 316 - gfx.text_width(name, 1), 18, 0xE7, 1, 0xF8)
             gfx.text(har, 316 - gfx.text_width(har, 1), 25, 0xE7, 1, 0xF8)
         end
+        -- the score, and the announcer's callouts on their way to it
+        self.scores[i]:draw(self.scores[i].human)
         -- round tokens (BK animation 27: sprite 1 empty, 0 won)
         local tok = self.bk.anims[27]
         if tok then

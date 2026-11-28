@@ -150,5 +150,56 @@ do
     check(arena.tick_ms(0) == 68, "arena: 68 ms in the slow-down")
 end
 
+do
+    -- the scoreboard file: SCORES.DAT entries round-trip, and new scores
+    -- find their place
+    local scores = require("game.scores")
+    local pages = scores.parse(nil)
+    check(#pages == 4 and #pages[1] == 20 and pages[1][1].score == 0, "scores: empty board")
+    scores.insert(pages, 2, 1, { score = 1250400, name = "JOEL", har = 2, pilot = 9 })
+    scores.insert(pages, 2, 2, { score = 40000, name = "ANGEL", har = 5, pilot = 7 })
+    local data = scores.serialize(pages)
+    check(#data == 4 * 20 * 24, "scores: 1920 bytes")
+    local back = scores.parse(data)
+    local e = back[2][1]
+    check(e.score == 1250400 and e.name == "JOEL" and e.har == 2 and e.pilot == 9, "scores: round trip")
+    check(back[2][2].name == "ANGEL" and back[1][1].score == 0, "scores: other entries")
+    check(scores.slot(back, 2, 500000) == 2 and scores.slot(back, 2, 0) == nil, "scores: slot")
+    check(scores.slot(back, 2, 2000000) == 1, "scores: a new top score")
+    scores.insert(back, 2, 2, { score = 500000, name = "ACE", har = 0, pilot = 0 })
+    check(back[2][3].name == "ANGEL" and #back[2] == 20, "scores: entries move down, 20 kept")
+end
+
+do
+    -- the announcer's scoring
+    gfx.text_width = function(s) return #s * 6 end
+    package.loaded["game.res"] = { text = function(id)
+        return ({ [201] = " CONSECUTIVE HITS", [202] = " HIT COMBO", [203] = "PERFECT ROUND", [204] = "VITALITY",
+                  [205] = "SCRAP BONUS", [206] = "DESTRUCTION BONUS" })[id] or ""
+    end }
+    package.loaded["game.score"] = nil
+    local Score = require("game.score")
+    check(Score.format(1234567) == "1,234,567" and Score.format(600) == "600", "score: commas")
+    check(Score.multiplier(1) == 20 and Score.multiplier(5) == 100 and Score.multiplier(6) == 150
+        and Score.multiplier(7) == 200 and Score.multiplier(nil) == 100, "score: multipliers")
+    local s = Score.new(1, true, 100, 1000)
+    for _ = 1, 5 do s:hit(6) end
+    check(s.total == 1000 + 3000, "score: hits x multiplier")
+    s:end_combo(100, 100)
+    check(#s.texts == 1 and s.texts[1].text == "5 HIT COMBO 12,000", "score: combo callout")
+    s:interrupted(100, 100)
+    check(#s.texts == 2 and s.texts[2].text == "5 CONSECUTIVE HITS 3,000", "score: consecutive callout")
+    s:victory(100, 100, 100)
+    check(s.texts[3].text == "PERFECT ROUND 200,000" and s.texts[4].text == "VITALITY 200,000", "score: perfect")
+    for _ = 1, 1000 do s:tick() end
+    check(not s:busy() and s.total == 4000 + 12000 + 3000 + 400000, "score: callouts land in the total")
+    local cpu = Score.new(2, false, 100)
+    cpu:hit(6); cpu:hit(6); cpu:end_combo(0, 0)
+    check(cpu.total == 0 and cpu.texts[1].text == "2 HIT COMBO", "score: the computer scores nothing")
+    local short = Score.new(1, true, 100)
+    short:hit(5); short:hit(5); short:hit(5); short:interrupted(0, 0)
+    check(#short.texts == 0, "score: three in a row isn't a run")
+end
+
 if fails > 0 then error(fails .. " Lua test(s) failed") end
 print("all Lua tests passed")

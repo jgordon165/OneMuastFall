@@ -12,6 +12,9 @@
 -- goes back to the pilots, on the pilot page to the main menu.
 --
 -- In a one player game the computer takes a random other pilot and HAR.
+-- The score carries from fight to fight while you keep winning; a loss
+-- (or leaving the pilot page) ends the run, and a score that makes the
+-- list goes to the SCOREBOARD for your name.
 -- The level, arena, rounds and speed come from GAMEPLAY (scenes/gameplay.lua).
 
 local Stage    = require("core.stage")
@@ -36,6 +39,9 @@ local BAR = { border = 0xA2, tl = 0xA7, mid = 0xA5, br = 0xA3 }  -- PROGRESSBAR_
 
 -- wins of each side in this session's two player games
 M.wins = { 0, 0 }
+
+-- the one player run: { score, pilot, har } (nil between runs)
+M.run = nil
 
 -- ---- images ------------------------------------------------------------------
 
@@ -114,6 +120,8 @@ local function index(c) return c.row * 5 + c.col end
 function M:enter(args)
     args = args or {}
     self.vs_ai = args.vs_ai and true or false
+    -- a new one player game from the menu starts a new run
+    if self.vs_ai and not args.back then M.run = { score = 0 } end
     self.bk = res.bk("MELEE.BK")
     self.stage = Stage.new(self.bk)
     self.stage.no_music = true
@@ -267,16 +275,31 @@ function M:fight()
     end
     local s = gameplay.settings()
     local picks = { pilot = { a, self.pilot_id[2] }, har = { har_a, index(self.cursor[2]) } }
+    local run = vs_ai and M.run or nil
+    if run then run.pilot, run.har = a, har_a end
     scenes.switch(require("scenes.arena"), {
         arena = s.arena, rounds = s.rounds, speed = s.speed,
         players = {
-            { har = har_a, pilot = pilots[a + 1] },
+            { har = har_a, pilot = pilots[a + 1], score = run and run.score or nil },
             { har = har_b, pilot = pilots[b + 1], ai = vs_ai and s.level or nil },
         },
-        on_done = function(winner)
+        on_done = function(winner, totals)
             if not vs_ai and winner then M.wins[winner + 1] = M.wins[winner + 1] + 1 end
+            if run then
+                run.score = totals and totals[1] or run.score
+                if winner ~= 0 then M.end_run(); return end   -- lost: the run is over
+            end
             scenes.switch(require("scenes.melee"), { vs_ai = vs_ai, back = picks })
         end,
+    })
+end
+
+--- The one player run is over: to the SCOREBOARD with its score.
+function M.end_run()
+    local run = M.run
+    M.run = nil
+    scenes.switch(require("scenes.scoreboard"), {
+        pending = run and run.score > 0 and { score = run.score, har = run.har or 0, pilot = run.pilot or 0 } or nil,
     })
 end
 
@@ -286,6 +309,8 @@ function M:update(dt)
         if self.page == HAR_PAGE then
             self:restore_cursors(self.pilot_id[1], self.pilot_id[2])
             self:enter_pilot_page()
+        elseif self.vs_ai and M.run and M.run.score > 0 then
+            M.end_run()
         else
             scenes.switch(require("scenes.menu"))
         end

@@ -33,7 +33,7 @@ function M:enter()
         { label = "GAMEPLAY",        action = function() scenes.switch(require("scenes.gameplay")) end },
         { label = "HELP",            action = not_yet },
         { label = "DEMO",            action = function() scenes.switch(require("scenes.intro")) end },
-        { label = "SCOREBOARD",      action = not_yet },
+        { label = "SCOREBOARD",      action = function() scenes.switch(require("scenes.scoreboard")) end },
         { label = "QUIT",            action = function() sys.quit() end,
           disabled = not sys.can_exit },   -- the XeLL build has nowhere to go
     }, 165, 5, 151, 119)

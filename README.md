@@ -82,6 +82,15 @@ takes a random other pilot and HAR. Esc goes back a page. GAMEPLAY in the
 main menu sets the computer's level, the arena (or random), the rounds and
 the game speed. Esc leaves a fight; after it you're back on the HAR page.
 
+The announcer calls out consecutive hits, combos, PERFECT ROUND, VITALITY
+and the scrap / destruction bonuses as in the original, and their points
+slide into your score under your name (docs/fighting.md). In a one player
+game the score carries from fight to fight; when the run ends (a lost
+fight, or Esc on the pilot page) a top-20 score goes to the SCOREBOARD for
+your name: type it, or pick letters with Up/Down on a pad. SCOREBOARD in
+the main menu shows the board (Left/Right: one page per ROUNDS setting);
+it's saved as SCORES.DAT in your preferences folder.
+
 | | Player 1 | Player 2 |
 |---|---|---|
 | move / crouch / jump | arrows (Home, PgUp, End, PgDn diagonals) | W A D X (Q E Z C diagonals) |
