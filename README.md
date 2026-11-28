@@ -19,7 +19,7 @@ links the official download. Original files are git-ignored as a safety net.
 ## Status
 
 - **Every original format decodes**: scenes (BK), the 11 HARs (AF), pilot
-  photos (PIC), sounds, text, fonts, palettes — see
+  photos (PIC), sounds, text, fonts, palettes, tournaments (TRN) — see
   [docs/formats.md](docs/formats.md).
 - **The animation scripts run**: the per-frame scripting language every
   BK and AF animation is written in (spawning, sounds, music, palette
@@ -32,10 +32,12 @@ links the official download. Original files are git-ignored as a safety net.
   blocking, damage, stun, knock-downs, rounds, KOs, victory poses, the HUD.
   How it works: [docs/fighting.md](docs/fighting.md).
 - **Asset explorer** (F12): browse and play every BK animation and scene,
-  every HAR move, photo, sound, song and string.
-- Not yet: the original's HAR select and vs screens, arena hazards,
-  tournament mode, the other menus, settings, networking (the list is at
-  the end of docs/fighting.md).
+  every HAR move, photo, sound, song and string, and each tournament's
+  pilots, requirements and quotes.
+- **Tournament mode** is being worked out: what the original does and the
+  plan are in [docs/tournament.md](docs/tournament.md).
+- Not yet: the vs screen, arena hazards, tournament play, the other
+  menus, networking (the list is at the end of docs/fighting.md).
 
 ## Build
 

@@ -107,6 +107,7 @@ add_library(omf_formats STATIC
     src/formats/bk.cpp
     src/formats/af.cpp
     src/formats/pic.cpp
+    src/formats/trn.cpp
     src/formats/sounds.cpp
     src/formats/language.cpp
     src/formats/font.cpp

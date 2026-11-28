@@ -32,6 +32,7 @@ extern "C" {
 #include "formats/font.h"
 #include "formats/language.h"
 #include "formats/pic.h"
+#include "formats/trn.h"
 #include "formats/sounds.h"
 
 namespace {
@@ -101,6 +102,7 @@ void setStr(lua_State* L, const char* k, const std::string& v) {
     lua_setfield(L, -2, k);
 }
 void setBool(lua_State* L, const char* k, bool v) { lua_pushboolean(L, v); lua_setfield(L, -2, k); }
+void setNum(lua_State* L, const char* k, double v) { lua_pushnumber(L, v); lua_setfield(L, -2, k); }
 void pushBytes(lua_State* L, const uint8_t* d, size_t n) { lua_pushlstring(L, reinterpret_cast<const char*>(d), n); }
 
 void pushSprite(lua_State* L, const omf::Sprite& s) {
@@ -280,6 +282,144 @@ int omf_pic(lua_State* L) {
         lua_setfield(L, -2, "sprite");
         lua_rawseti(L, -2, lua_Integer(i));   // 0-based
     }
+    return 1;
+}
+
+// One pilot block (tournament enemy, later the player's save) as a table.
+void pushPilot(lua_State* L, const omf::Pilot& p) {
+    lua_createtable(L, 0, 80);
+    setStr(L, "name", p.name);
+    setInt(L, "wins", p.wins);
+    setInt(L, "losses", p.losses);
+    setInt(L, "rank", p.rank);
+    setInt(L, "har", p.harId);   // 255: buys a random HAR with its money
+    setInt(L, "arm_power", p.armPower);
+    setInt(L, "leg_power", p.legPower);
+    setInt(L, "arm_speed", p.armSpeed);
+    setInt(L, "leg_speed", p.legSpeed);
+    setInt(L, "armor", p.armor);
+    setInt(L, "stun_resistance", p.stunResistance);
+    setInt(L, "power", p.power);
+    setInt(L, "agility", p.agility);
+    setInt(L, "endurance", p.endurance);
+    setInt(L, "offense", p.offense);
+    setInt(L, "defense", p.defense);
+    setInt(L, "money", p.money);
+    setInt(L, "color1", p.color1);
+    setInt(L, "color2", p.color2);
+    setInt(L, "color3", p.color3);
+    setStr(L, "trn_name", p.trnName);
+    setStr(L, "trn_desc", p.trnDesc);
+    setStr(L, "trn_image", p.trnImage);
+    setNum(L, "trn_rank_money", p.trnRankMoney);
+    setNum(L, "trn_winnings_mult", p.trnWinningsMult);
+    setInt(L, "pilot_id", p.pilotId);
+    setInt(L, "force_arena", p.forceArena);
+    setInt(L, "difficulty", p.difficulty);
+    setInt(L, "movement", p.movement);
+    lua_createtable(L, 11, 0);
+    for (int i = 0; i < 11; ++i) {
+        lua_pushinteger(L, p.enhancements[size_t(i)]);
+        lua_rawseti(L, -2, i);   // by HAR, 0-based
+    }
+    lua_setfield(L, -2, "enhancements");
+    setBool(L, "secret", p.secret);
+    setBool(L, "only_fight_once", p.onlyFightOnce);
+    lua_createtable(L, 0, 10);
+    setInt(L, "rank", p.reqRank);
+    setInt(L, "max_rank", p.reqMaxRank);
+    setInt(L, "har", p.reqFighter);
+    setInt(L, "difficulty", p.reqDifficulty);
+    setInt(L, "enemy", p.reqEnemy);
+    setInt(L, "vitality", p.reqVitality);
+    setInt(L, "accuracy", p.reqAccuracy);
+    setInt(L, "avg_damage", p.reqAvgDamage);
+    setBool(L, "scrap", p.reqScrap);
+    setBool(L, "destroy", p.reqDestroy);
+    lua_setfield(L, -2, "requires");
+    lua_createtable(L, 0, 5);
+    setInt(L, "normal", p.attNormal);
+    setInt(L, "hyper", p.attHyper);
+    setInt(L, "jump", p.attJump);
+    setInt(L, "defensive", p.attDef);
+    setInt(L, "sniper", p.attSniper);
+    lua_setfield(L, -2, "attitude");
+    lua_createtable(L, 0, 10);
+    setInt(L, "close", p.apClose);
+    setInt(L, "throw", p.apThrow);
+    setInt(L, "special", p.apSpecial);
+    setInt(L, "jump", p.apJump);
+    setInt(L, "high", p.apHigh);
+    setInt(L, "low", p.apLow);
+    setInt(L, "middle", p.apMiddle);
+    setInt(L, "pref_jump", p.prefJump);
+    setInt(L, "pref_forward", p.prefFwd);
+    setInt(L, "pref_back", p.prefBack);
+    lua_setfield(L, -2, "ai");
+    setNum(L, "learning", p.learning);
+    setNum(L, "forget", p.forget);
+    setInt(L, "enemies_inc_unranked", p.enemiesIncUnranked);
+    setInt(L, "enemies_ex_unranked", p.enemiesExUnranked);
+    setInt(L, "har_trades", p.harTrades);
+    setInt(L, "winnings", p.winnings);
+    setInt(L, "total_value", p.totalValue);
+    setInt(L, "photo", p.photoId);
+    setBool(L, "is_player", p.isPlayer != 0);
+    pushBytes(L, p.palette.rgb.data(), 48 * 3);
+    lua_setfield(L, -2, "palette");
+    lua_createtable(L, 10, 0);
+    for (int i = 0; i < 10; ++i) {
+        lua_pushlstring(L, p.quotes[size_t(i)].data(), p.quotes[size_t(i)].size());
+        lua_rawseti(L, -2, i);   // by language, 0 English
+    }
+    lua_setfield(L, -2, "quotes");
+}
+
+// omf.trn(name): a tournament (docs/tournament.md)
+int omf_trn(lua_State* L) {
+    const char* name = luaL_checkstring(L, 1);
+    omf::Bytes b;
+    if (!readData(L, name, b)) return 2;
+    omf::TrnFile t;
+    std::string err;
+    if (!omf::loadTrn(b, t, &err)) return fail(L, name, err);
+    lua_createtable(L, 0, 12);
+    setStr(L, "bk_name", t.bkName);
+    setStr(L, "pic_file", t.picFile);
+    setNum(L, "winnings_multiplier", t.winningsMultiplier);
+    setInt(L, "registration_fee", t.registrationFee);
+    setInt(L, "assumed_initial_value", t.assumedInitialValue);
+    setInt(L, "tournament_id", t.tournamentId);
+    lua_createtable(L, int(t.enemies.size()), 0);
+    for (size_t i = 0; i < t.enemies.size(); ++i) {
+        pushPilot(L, t.enemies[i]);
+        lua_rawseti(L, -2, lua_Integer(i + 1));
+    }
+    lua_setfield(L, -2, "enemies");
+    lua_createtable(L, 10, 0);
+    for (int i = 0; i < 10; ++i) {
+        const auto& loc = t.locales[size_t(i)];
+        lua_createtable(L, 0, 4);
+        setStr(L, "title", loc.title);
+        setStr(L, "description", loc.description);
+        pushSprite(L, loc.logo);
+        lua_setfield(L, -2, "logo");
+        lua_createtable(L, 11, 0);
+        for (int h = 0; h < 11; ++h) {
+            lua_createtable(L, 10, 0);
+            for (int pg = 0; pg < 10; ++pg) {
+                const auto& txt = loc.endTexts[size_t(h)][size_t(pg)];
+                lua_pushlstring(L, txt.data(), txt.size());
+                lua_rawseti(L, -2, pg + 1);
+            }
+            lua_rawseti(L, -2, h);   // by HAR, 0-based
+        }
+        lua_setfield(L, -2, "endings");
+        lua_rawseti(L, -2, i);   // by language, 0 English
+    }
+    lua_setfield(L, -2, "locales");
+    pushBytes(L, t.palette.rgb.data() + 128 * 3, 40 * 3);
+    lua_setfield(L, -2, "palette");   // colours 128..167
     return 1;
 }
 
@@ -593,7 +733,7 @@ void registerLuaApi(lua_State* L, Engine& e) {
     lua_setfield(L, -2, "__gc");
     lua_pop(L, 1);
 
-    static const luaL_Reg omfl[] = {{"bk", omf_bk}, {"af", omf_af}, {"pic", omf_pic}, {"lang", omf_lang},
+    static const luaL_Reg omfl[] = {{"bk", omf_bk}, {"af", omf_af}, {"pic", omf_pic}, {"trn", omf_trn}, {"lang", omf_lang},
                                     {"altpals", omf_altpals}, {"load_sounds", omf_load_sounds},
                                     {"load_fonts", omf_load_fonts}, {nullptr, nullptr}};
     static const luaL_Reg gfxl[] = {

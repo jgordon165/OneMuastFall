@@ -11,6 +11,7 @@
 #include "formats/bk.h"
 #include "formats/font.h"
 #include "formats/language.h"
+#include "formats/trn.h"
 #include "formats/pic.h"
 #include "formats/sounds.h"
 
@@ -75,7 +76,7 @@ static fs::path find(const fs::path& dir, const std::string& name) {
 
 static void testRealData(const fs::path& dir) {
     std::printf("decoding the original files in %s\n", dir.string().c_str());
-    int bks = 0, afs = 0, sprites = 0;
+    int bks = 0, afs = 0, trns = 0, sprites = 0;
     for (auto& e : fs::directory_iterator(dir)) {
         std::string ext = e.path().extension().string();
         for (auto& c : ext) c = char(std::toupper(static_cast<unsigned char>(c)));
@@ -117,10 +118,26 @@ static void testRealData(const fs::path& dir) {
             CHECK(loadPic(b, pic));
             CHECK(!pic.photos.empty());
             std::printf("  %-12s %zu photos\n", e.path().filename().string().c_str(), pic.photos.size());
+        } else if (ext == ".TRN") {
+            CHECK(readFile(e.path().string(), b));
+            TrnFile trn;
+            std::string err;
+            bool ok = loadTrn(b, trn, &err);
+            if (!ok) std::printf("  %s: %s\n", e.path().filename().string().c_str(), err.c_str());
+            CHECK(ok);
+            CHECK(trn.enemies.size() == trn.enemyCount && trn.enemyCount >= 10);
+            CHECK(!trn.locales[0].title.empty() && trn.locales[0].logo.w > 0);
+            CHECK(!trn.enemies[0].name.empty() && !trn.enemies[0].quotes[0].empty());
+            for (auto& en : trn.enemies) CHECK(en.harId <= 10 || en.harId == 255);
+            decodeSprite(trn.locales[0].logo);
+            std::printf("  %-12s %zu pilots, fee %d, \"%s\"\n", e.path().filename().string().c_str(),
+                        trn.enemies.size(), trn.registrationFee, trn.locales[0].title.c_str());
+            ++trns;
         }
     }
     CHECK(bks >= 10);
     CHECK(afs == 11);
+    CHECK(trns == 4);
     std::printf("  %d sprites decoded\n", sprites);
 
     Bytes b;

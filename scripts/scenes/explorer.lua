@@ -6,6 +6,8 @@
 --               on/off, P next palette, S its animation string, Esc back
 --   AF          Left/Right pick a move, Enter play, S strings, Esc back
 --   PIC         Left/Right pick a photo (hold C: with its own 48 colours)
+--   TRN         Up/Down pick an opponent (his stats, requirements, quote),
+--               D the tournament's description and logo
 --   PSM         Enter plays / stops the song
 --   SOUNDS.DAT  Up/Down pick, Enter play
 --   ENGLISH.DAT Up/Down scroll the strings
@@ -50,7 +52,7 @@ end
 
 function M:enter()
     self.files = {}
-    local kinds = { BK = true, AF = true, PIC = true, PSM = true }
+    local kinds = { BK = true, AF = true, PIC = true, PSM = true, TRN = true }
     for _, e in ipairs(fs.list()) do
         local k = ext(e.name)
         if kinds[k] then self.files[#self.files + 1] = { name = e.name, kind = k, size = e.size } end
@@ -130,10 +132,17 @@ local function open_pic(name)
     return { kind = "PIC", name = name, pic = pic, sel = 0, count = n }
 end
 
+local function open_trn(name)
+    local trn, err = omf.trn(name)
+    if not trn then return { kind = "ERR", msg = err } end
+    return { kind = "TRN", name = name, trn = trn, sel = 1 }
+end
+
 function M:open(f)
     if f.kind == "BK" then self.view = open_bk(f.name)
     elseif f.kind == "AF" then self.view = open_af(f.name)
     elseif f.kind == "PIC" then self.view = open_pic(f.name)
+    elseif f.kind == "TRN" then self.view = open_trn(f.name)
     elseif f.kind == "PSM" then
         if self.playing == f.name then audio.stop_music(); self.playing = nil
         else
@@ -196,6 +205,11 @@ function M:update(dt)
     elseif v.kind == "PIC" then
         if input.pressed("left") then v.sel = (v.sel - 1) % v.count end
         if input.pressed("right") then v.sel = (v.sel + 1) % v.count end
+    elseif v.kind == "TRN" then
+        local n = #v.trn.enemies
+        if input.pressed("up") then v.sel = (v.sel - 2) % n + 1 end
+        if input.pressed("down") then v.sel = v.sel % n + 1 end
+        if input.pressed("d") then v.desc = not v.desc end
     elseif v.kind == "SOUNDS" then
         local n = #res.sounds + 1
         if input.pressed("up") then v.sel = (v.sel - 1) % n end
@@ -325,6 +339,73 @@ function M:draw_pic(v)
            p and ((p.is_player and "PLAYER " or "") .. (p.sex == 1 and "FEMALE" or "MALE")) or "")
 end
 
+local HAR_NAMES = { [0] = "JAGUAR", "SHADOW", "THORN", "PYROS", "ELECTRA", "KATANA", "SHREDDER", "FLAIL",
+                    "GARGOYLE", "CHRONOS", "NOVA", [255] = "(BUYS ONE)" }
+
+local function wrap_text(s, cols)
+    local lines, line = {}, ""
+    for word in s:gsub("{[^}]*}", " "):gmatch("%S+") do
+        if line == "" then line = word
+        elseif #line + 1 + #word <= cols then line = line .. " " .. word
+        else lines[#lines + 1] = line; line = word end
+    end
+    if line ~= "" then lines[#lines + 1] = line end
+    return lines
+end
+
+function M:draw_trn(v)
+    neutral_palette()
+    local t = v.trn
+    -- the tournament's own colours (128..167) for its logo
+    gfx.set_base(t.palette, 128)
+    menu_colors()
+    gfx.clear(0)
+    local loc = t.locales[0]
+    header(v.name .. "  " .. loc.title, "D DESCRIPTION")
+    if v.desc then
+        local logo = loc.logo
+        if logo and logo.img then gfx.draw(logo.img, (320 - logo.w) // 2, 14, false, false, false) end
+        local y = 14 + (logo and logo.h or 0) + 4
+        for i, l in ipairs(wrap_text(loc.description, 52)) do text(l, 4, y + (i - 1) * 7) end
+        text(string.format("FEE %dK  WINNINGS X%.2f  ASSUMED VALUE %dK", t.registration_fee,
+            t.winnings_multiplier, t.assumed_initial_value), 4, 185, C_DIM)
+        text(string.format("CUTSCENES %s  PHOTOS %s", t.bk_name, t.pic_file), 4, 192, C_DIM)
+        return
+    end
+    text(string.format("FEE %dK  WINNINGS X%.2f  %d PILOTS", t.registration_fee, t.winnings_multiplier,
+        #t.enemies), 4, 12, C_DIM)
+    for i, e in ipairs(t.enemies) do
+        local y = 20 + (i - 1) * 7
+        local c = i == v.sel and C_HI or C_TEXT
+        if i == v.sel then gfx.fill(0, y - 1, 320, 7, C_BG) end
+        text(string.format("%-15s %-10s %6dK P%-2d A%-2d E%-2d %s", e.name, HAR_NAMES[e.har] or e.har, e.money,
+            e.power, e.agility, e.endurance, e.secret and (e.only_fight_once and "*1" or "*") or ""), 4, y, c)
+    end
+    local e = t.enemies[v.sel]
+    if not e then return end
+    local y = 20 + #t.enemies * 7 + 3
+    text(string.format("ARM POWER %d SPEED %d  LEG POWER %d SPEED %d  ARMOR %d  STUN %d", e.arm_power,
+        e.arm_speed, e.leg_power, e.leg_speed, e.armor, e.stun_resistance), 4, y, C_DIM)
+    y = y + 7
+    text(string.format("AI OFFENSE %d DEFENSE %d  LEARNS %.1f FORGETS %.2f   * SECRET, *1 ONCE", e.offense,
+        e.defense, e.learning, e.forget), 4, y, C_DIM)
+    local r, req = e.requires, {}
+    if r.rank > 0 then req[#req + 1] = "RANK " .. r.rank end
+    if r.max_rank > 0 then req[#req + 1] = "RANK <= " .. r.max_rank end
+    if r.difficulty > 0 then req[#req + 1] = "DIFFICULTY " .. r.difficulty end
+    if r.vitality > 0 then req[#req + 1] = "VITALITY " .. r.vitality .. "%" end
+    if r.accuracy > 0 then req[#req + 1] = "ACCURACY " .. r.accuracy .. "%" end
+    if r.avg_damage > 0 then req[#req + 1] = "AVG DAMAGE " .. r.avg_damage end
+    if r.enemy > 0 then req[#req + 1] = "BEAT " .. (t.enemies[r.enemy] and t.enemies[r.enemy].name or r.enemy) end
+    if r.har > 0 then req[#req + 1] = "HAR " .. (HAR_NAMES[r.har] or r.har) end
+    if r.scrap then req[#req + 1] = "SCRAP" end
+    if r.destroy then req[#req + 1] = "DESTRUCTION" end
+    if #req > 0 then text("APPEARS AFTER: " .. table.concat(req, ", "), 4, y + 7, C_DIM) end
+    for i, l in ipairs(wrap_text(e.quotes[0] or "", 52)) do
+        if i <= 4 then text(l, 4, y + 14 + (i - 1) * 7) end
+    end
+end
+
 function M:draw_sounds(v)
     neutral_palette()
     gfx.clear(0)
@@ -363,6 +444,7 @@ function M:draw()
     elseif v.kind == "BK" then self:draw_bk(v)
     elseif v.kind == "AF" then self:draw_af(v)
     elseif v.kind == "PIC" then self:draw_pic(v)
+    elseif v.kind == "TRN" then self:draw_trn(v)
     elseif v.kind == "SOUNDS" then self:draw_sounds(v)
     elseif v.kind == "TEXT" then self:draw_text(v)
     elseif v.kind == "ERR" then
