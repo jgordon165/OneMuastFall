@@ -446,6 +446,16 @@ int gfx_tint(lua_State* L) {
     return 0;
 }
 int gfx_darken(lua_State* L) { E->video.darken(int(luaL_checkinteger(L, 1))); return 0; }
+// gfx.mark(on): pixels drawn while on are sprite pixels for the upscaler
+int gfx_mark(lua_State* L) { E->video.setMarking(lua_toboolean(L, 1)); return 0; }
+// gfx.upscale(factor, smoothing, soft, sharpen): factor 1..4, smoothing 0
+// off / 1 sprites / 2 everything, soft = linear filtering to the window,
+// sharpen 0 off .. 3 strong
+int gfx_upscale(lua_State* L) {
+    E->video.setUpscale(int(luaL_optinteger(L, 1, 1)), int(luaL_optinteger(L, 2, 0)), lua_toboolean(L, 3),
+                        int(luaL_optinteger(L, 4, 0)));
+    return 0;
+}
 int gfx_color(lua_State* L) {
     int i = int(luaL_checkinteger(L, 1)) & 0xFF;
     auto& w = E->video.work();
@@ -591,7 +601,7 @@ void registerLuaApi(lua_State* L, Engine& e) {
         {"line", gfx_line}, {"draw", gfx_draw}, {"draw_color", gfx_draw_color}, {"remap_rect", gfx_remap_rect}, {"text", gfx_text},
         {"text_width", gfx_text_width}, {"has_fonts", gfx_has_fonts}, {"clip", gfx_clip}, {"unclip", gfx_unclip},
         {"set_base", gfx_set_base}, {"base_color", gfx_base_color}, {"reset_palette", gfx_reset_palette},
-        {"mix", gfx_mix}, {"tint", gfx_tint}, {"darken", gfx_darken}, {"color", gfx_color},
+        {"mix", gfx_mix}, {"tint", gfx_tint}, {"darken", gfx_darken}, {"mark", gfx_mark}, {"upscale", gfx_upscale}, {"color", gfx_color},
         {"screenshot", gfx_screenshot}, {"fullscreen", gfx_fullscreen}, {nullptr, nullptr}};
     static const luaL_Reg audiol[] = {{"sound", audio_sound}, {"stop", audio_stop}, {"stop_all", audio_stop_all},
                                       {"music", audio_music}, {"stop_music", audio_stop_music},

@@ -120,6 +120,7 @@ add_executable(onemustfall WIN32
     src/log.cpp
     src/vfs.cpp
     src/video.cpp
+    src/upscale.cpp
     src/audio.cpp
     src/input.cpp
     src/lua_api.cpp)
@@ -180,6 +181,10 @@ if(OMF_TESTS)
     target_link_libraries(omf_tests PRIVATE omf_formats)
     target_compile_options(omf_tests PRIVATE ${OMF_WARN})
     add_test(NAME formats COMMAND omf_tests)
+    add_executable(omf_upscale_test tests/test_upscale.cpp src/upscale.cpp)
+    target_include_directories(omf_upscale_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    target_compile_options(omf_upscale_test PRIVATE ${OMF_WARN})
+    add_test(NAME upscale COMMAND omf_upscale_test)
     # With OMF_DATA set to a game folder, the tests also decode every original
     # file (CI has none, so there they only run the synthetic cases).
 

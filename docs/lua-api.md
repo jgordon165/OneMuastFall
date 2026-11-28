@@ -41,7 +41,9 @@ A sprite is `{ x, y, w, h, index, missing, img }`.
 | `set_base(rgb [, first])`, `base_color(i, r, g, b)` | the scene's base palette |
 | `reset_palette()`, `mix(ref, start, end, step)`, `tint(...)`, `darken(step)` | this frame's palette: rebuilt from the base, then tricks applied |
 | `color(i)` | r, g, b of this frame's palette |
-| `screenshot(path)`, `fullscreen()` | |
+| `mark(on)` | while on, drawn pixels count as sprite pixels for SMOOTHING SPRITES (`core/player.lua` marks every animated object) |
+| `upscale(factor, smoothing, soft, sharpen)` | ADVANCED SETTINGS: factor 1..4, smoothing 0 off / 1 sprites / 2 everything, soft = linear stretch to the window, sharpen 0..3 |
+| `screenshot(path)`, `fullscreen()` | screenshots are of the frame as shown (upscaled / sharpened) |
 
 ## Sound: `audio`
 
