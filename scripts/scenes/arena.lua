@@ -36,6 +36,8 @@ local LAYER_BOTTOM, LAYER_MIDDLE, LAYER_TOP = 0, 1, 2
 -- ---- setup -------------------------------------------------------------------------
 
 function M:enter(args)
+    -- the scene table is reused fight after fight: clear the last match's end
+    self.done, self.fight_at = false, nil
     self.args = args
     self.arena_id = args.arena or 0
     local bk = res.bk("ARENA" .. self.arena_id .. ".BK")
